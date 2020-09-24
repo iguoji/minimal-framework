@@ -1,0 +1,15 @@
+{
+    "name": "iguoji/minimal",
+    "description": "a minimalism swoole framework",
+    "keywords": ["framework", "swoole", "php"],
+    "homepage": "https://github.com/iguoji/minimal",
+    "require": {
+        "php": ">=8.0.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Minimal\\": "src/",
+            "App\\": "tests/app/"
+        }
+    }
+}
