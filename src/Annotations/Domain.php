@@ -9,14 +9,22 @@ use Minimal\Contracts\Annotation;
 /**
  * Http请求域名限制
  */
-#[Attribute(Attribute::TARGET_CLASS, Attribute::TARGET_METHOD)]
+#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_METHOD)]
 class Domain implements Annotation
 {
     /**
      * 构造函数
      */
-    public function __construct(protected array $domains)
+    public function __construct(protected array $domains = ['*'])
     {}
+
+    /**
+     * 获取目标
+     */
+    public function getTargets() : array
+    {
+        return [Attribute::TARGET_METHOD];
+    }
 
     /**
      * 获取优先级

@@ -18,9 +18,8 @@ class Brand
     /**
      * 保存品牌
      */
-    #[Domain(['a.baidu.com', 'dev.baidu.com'])]
-    #[Route('/brand/save', ['get', 'post'])]
-    #[Event([\App\Middleware\Test::class])]
+    #[Domain]
+    #[Route('/brand/save', ['GET', 'post'])]
     public function save($req, $res)
     {
         return [true, time()];
@@ -30,7 +29,6 @@ class Brand
      * 编辑品牌
      */
     #[Route('/brand/edit', ['put', 'batch'])]
-    #[Event([\App\Middleware\Auth2::class])]
     #[Middleware]
     public function edit($req, $res)
     {

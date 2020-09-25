@@ -4,17 +4,27 @@ declare(strict_types=1);
 namespace Minimal\Annotations;
 
 use Attribute;
-use Minimal\Application;
 use Minimal\Contracts\Annotation;
 
-#[Attribute(Attribute::TARGET_CLASS, Attribute::TARGET_METHOD)]
+/**
+ * 设置中间件
+ */
+#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_METHOD)]
 class Middleware implements Annotation
 {
     /**
      * 构造函数
      */
-    public function __construct(protected Application $app, protected array $middlewares = [])
+    public function __construct(protected array $middlewares = [])
     {}
+
+    /**
+     * 获取目标
+     */
+    public function getTargets() : array
+    {
+        return [Attribute::TARGET_METHOD];
+    }
 
     /**
      * 获取优先级
@@ -29,7 +39,6 @@ class Middleware implements Annotation
      */
     public function handle(array $context) : mixed
     {
-        $event = $context['class'] . ':' . $context['method'] . ':OnBefore';
-        return array_walk($this->middlewares, fn($middle) => $this->app->on($event, $middle));
+        return $this->middlewares;
     }
 }

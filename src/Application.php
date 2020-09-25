@@ -8,12 +8,13 @@ use ReflectionClass;
 use ReflectionMethod;
 use InvalidArgumentException;
 use UnexpectedValueException;
-use Minimal\Contracts\Annotation;
+use Minimal\Contracts\Listener;
+
 
 /**
  * 应用类
  */
-class Application extends Container
+class Application
 {
     /**
      * 容器对象
@@ -35,108 +36,33 @@ class Application extends Container
      */
     public function __construct(protected string $basePath)
     {
+        // 容器对象
         $this->container = new Container();
         $this->container->set(Container::class, $this->container);
         $this->container->set(Application::class, $this);
-
-        $this->annotation($basePath);
-    }
-
-    /**
-     * 注解解析
-     */
-    public function annotation(string $path) : void
-    {
-        // 循环扫描文件夹
-        if (is_dir($path)) {
-            $paths = glob($path . DIRECTORY_SEPARATOR . '*');
-            foreach ($paths as $path) {
-                $this->annotation($path);
-            }
-        } else {
-            // 根据路径得到类名
-            $class = mb_substr($path, mb_strlen($this->basePath), -4);
-            $class = trim($class, DIRECTORY_SEPARATOR);
-            $class = trim(mb_ereg_replace(DIRECTORY_SEPARATOR, '\\', $class));
-            $class = ucwords($class);
-            // 上下文
-            $context = ['path' => $path, 'class' => $class];
-            // 解析注解并填充上下文和返回待处理注解实例
-            $parse = function(array $attrs, array $context, array $queue = []) : array {
-                // 循环所有注解
-                foreach ($attrs as $attr) {
-                    // 名字和标签
-                    $name = $attr->getName();
-                    $tag = mb_strtolower(mb_substr($name, mb_strrpos($name, '\\') + 1));
-                    // 如果注解类不存在，当作全局属性
-                    if (! class_exists($attr->getName())) {
-                        $context[$tag] = $attr->getArguments();
-                        continue;
-                    }
-                    // 实例化注解类
-                    $ins = $this->container->make($attr->getName(), ...$attr->getArguments());
-                    // 如果没有实现框架的注解接口，也当作全局属性
-                    if (! $ins instanceof Annotation) {
-                        $context[$tag] = $attr->getArguments();
-                        continue;
-                    }
-                    // 保存到列队
-                    $append = true;
-                    foreach ($queue as $key => $item) {
-                        if ($item::class == $ins::class) {
-                            $append = false;
-                            $queue[$key] = $ins;
-                            break;
-                        } else if ($ins->getPriority() > $item->getPriority()) {
-                            $append = false;
-                            array_splice($queue, $key, 0, [$ins]);
-                            break;
-                        }
-                    }
-                    if ($append) {
-                        array_push($queue, $ins);
-                    }
-                }
-                // 返回结果
-                return [$context, $queue];
-            };
-            // 开始解析注解类
-            if ($class && class_exists($class)) {
-                // 上下文
-                $context['target'] = Attribute::TARGET_CLASS;
-                $context['instance'] = $this->container->make($class);
-                // 解析类
-                $refClass = new ReflectionClass($class);
-                [$context, $queue] = $parse($refClass->getAttributes(), $context);
-                // 解析所有方法
-                foreach ($refClass->getMethods(ReflectionMethod::IS_PUBLIC) as $refMethod) {
-                    // 上下文
-                    $context['target'] = Attribute::TARGET_METHOD;
-                    $context['method'] = $refMethod->getName();
-                    // 解析当前方法的注解
-                    [$methodContext, $methodQueue] = $parse($refMethod->getAttributes(), $context, $queue);
-                    array_walk($methodQueue, function($ins) use(&$methodContext){
-                        $methodContext[$ins::class] = $ins->handle($methodContext);
-                    });
-                }
-            }
-        }
+        // 注解处理
+        $annotation = new Annotation($this->container);
+        $annotation->scan(__DIR__, [
+            'namespace' =>  __NAMESPACE__
+        ]);
+        $annotation->scan($basePath);
     }
 
     /**
      * 添加路由
      */
-    public function addRoute(string $path, array $methods = ['POST'], array $callable, array $domains = ['*']) : int
+    public function addRoute(string $path, array $methods = ['POST'], array $callable, array $domains = ['*'], array $middlewares = []) : int
     {
         // 全局路由器
         $router = &$this->router;
         $router['routes'] = $router['routes'] ?? [];
         // 将路由添加到路由器并得到索引编号
         $routeId = array_push($router['routes'], [
-            'path'      =>  $path,
-            'callable'  =>  $callable,
-            'methods'   =>  $methods,
-            'domains'   =>  $domains
+            'path'          =>  $path,
+            'callable'      =>  $callable,
+            'methods'       =>  $methods,
+            'domains'       =>  $domains,
+            'middlewares'   =>  $middlewares,
         ]) - 1;
         // 循环域名，并根据路径保存到域名下
         foreach ($domains as $domain) {
@@ -147,24 +73,52 @@ class Application extends Container
     }
 
     /**
+     * 获取路由
+     */
+    public function getRoute(string $path, string $domain) : ?array
+    {
+        foreach (array_keys($this->router['domains']) as $value) {
+            if ($value == '*' || preg_match('/^' . str_replace('*', '[a-zA-Z0-9-]+', $value) . '$/', $domain)) {
+                if (isset($this->router['domains'][$value][$path])) {
+                    return $this->router['routes'][$this->router['domains'][$value][$path]];
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * 监听事件
      */
-    public function on(string $event, string $listener)
+    public function on(string $eventName, callable $callback, int $priority = 0) : void
     {
-        printf('Event: %s, For: %s', $event, $listener);
-        echo PHP_EOL;
+        if (!isset($this->events[$eventName])) {
+            $this->events[$eventName] = [];
+        }
+        $index = count($this->events[$eventName]);
+        foreach ($this->events[$eventName] as $key => $array) {
+            if ($priority > $array['priority']) {
+                $index = $key;
+                break;
+            }
+        }
+        array_splice($this->events[$eventName], $index, 0, [[
+            'callable'  =>  $callback,
+            'priority'  =>  $priority,
+        ]]);
     }
 
     /**
      * 触发事件
      */
-    public function trigger(string $name, ...$arguments)
+    public function trigger(string $eventName, ...$arguments) : void
     {
-        // printf("[%s] \t %s", $name, implode(', ', $arguments));
-        print_r($name);
-        echo PHP_EOL;
-        // print_r($arguments);
-        // echo PHP_EOL;
+        foreach ($this->events[$eventName] ?? [] as $key => $array) {
+            $result = $this->container->call($array['callable'], $eventName, ...$arguments);
+            if ($result === false) {
+                break;
+            }
+        }
     }
 
     /**
@@ -203,7 +157,7 @@ class Application extends Container
             'AfterReload'       =>  'Server:OnAfterReload',
         ] as $swooleEvent => $minimalEvent) {
             $server->on($swooleEvent, function(...$arguments) use($minimalEvent) {
-                $this->trigger($minimalEvent, ...$arguments);
+                $this->trigger($minimalEvent, $arguments);
             });
         };
         $server->start();

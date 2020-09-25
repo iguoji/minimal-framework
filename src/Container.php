@@ -18,11 +18,6 @@ class Container
     protected array $instances = [];
 
     /**
-     * 共享列表
-     */
-    protected array $shares = [];
-
-    /**
      * 别名集合
      */
     protected array $aliases = [];
@@ -175,8 +170,6 @@ class Container
             // 获得实例
             $instance = $class->newInstanceArgs($parameters);
         }
-        // 保存实例、不保存实例，只有Set方法才保存以供复用
-        // $this->instances[$class->getName()] = $instance;
         // 返回实例
         return $instance;
     }

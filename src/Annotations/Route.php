@@ -7,14 +7,25 @@ use Attribute;
 use Minimal\Application;
 use Minimal\Contracts\Annotation;
 
+/**
+ * 添加路由
+ */
 #[Attribute(Attribute::TARGET_METHOD)]
 class Route implements Annotation
 {
     /**
      * 构造函数
      */
-    public function __construct(protected Application $app, protected string $path, protected array $methods)
+    public function __construct(protected Application $app, protected string $path, protected array $methods = ['POST'])
     {}
+
+    /**
+     * 获取目标
+     */
+    public function getTargets() : array
+    {
+        return [Attribute::TARGET_METHOD];
+    }
 
     /**
      * 获取优先级
@@ -29,6 +40,12 @@ class Route implements Annotation
      */
     public function handle(array $context) : mixed
     {
-        return $this->app->addRoute($this->path, $this->methods, [$context['instance'], $context['method']], $context[Domain::class] ?? ['*']);
+        return $this->app->addRoute(
+            $this->path,
+            $this->methods,
+            [$context['instance'], $context['method']],
+            $context[Domain::class] ?? ['*'],
+            $context[Middleware::class] ?? [],
+        );
     }
 }

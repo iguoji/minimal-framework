@@ -1,27 +1,5 @@
 #!/usr/bin/env php
 <?php
-
-
-// $process = new \Swoole\Process(function(){
-//     echo '123123';
-// });
-// $process->start();
-
-
-// $workerNum = 10;
-// $pool = new Swoole\Process\Pool($workerNum);
-
-// $pool->on("WorkerStart", function ($pool, $workerId) {
-//     echo "Worker#{$workerId} is started\n";
-// });
-
-// $pool->on("WorkerStop", function ($pool, $workerId) {
-//     echo "Worker#{$workerId} is stopped\n";
-// });
-
-// $pool->start();
-
-
 require_once '../vendor/autoload.php';
 
 $before = round(memory_get_usage()/1024/1024, 2);
@@ -32,4 +10,4 @@ $app = new Minimal\Application(__DIR__);
 $after = round(memory_get_usage()/1024/1024, 2);
 echo '运行后内存：'.$after.'MB，相差：' . ($after - $before) . 'MB', PHP_EOL;
 
-// $app->start();
+$app->start();
