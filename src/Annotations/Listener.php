@@ -23,6 +23,14 @@ class Listener implements Annotation
     {}
 
     /**
+     * 获取在上下文中的Key
+     */
+    public function getContextKey() : ?string
+    {
+        return null;
+    }
+
+    /**
      * 获取目标
      */
     public function getTargets() : array

@@ -4,18 +4,19 @@ declare(strict_types=1);
 namespace Minimal\Annotations;
 
 use Attribute;
+use Minimal\Container;
 use Minimal\Contracts\Annotation;
 
 /**
- * 设置中间件
+ * 验证器
  */
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_METHOD)]
-class Middleware implements Annotation
+class Validate implements Annotation
 {
     /**
      * 构造函数
      */
-    public function __construct(protected array $middlewares = [])
+    public function __construct(protected Container $container, protected string $class)
     {}
 
     /**
@@ -23,7 +24,7 @@ class Middleware implements Annotation
      */
     public function getContextKey() : ?string
     {
-        return 'middlewares';
+        return 'validate';
     }
 
     /**
@@ -47,6 +48,6 @@ class Middleware implements Annotation
      */
     public function handle(array $context) : mixed
     {
-        return $this->middlewares;
+        return $this->container->make($this->class);
     }
 }

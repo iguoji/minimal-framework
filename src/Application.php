@@ -51,7 +51,7 @@ class Application
     /**
      * 添加路由
      */
-    public function addRoute(string $path, array $methods = ['POST'], array $callable, array $domains = ['*'], array $middlewares = []) : int
+    public function addRoute(string $path, array $methods = ['POST'], array $context) : int
     {
         // 全局路由器
         $router = &$this->router;
@@ -59,13 +59,14 @@ class Application
         // 将路由添加到路由器并得到索引编号
         $routeId = array_push($router['routes'], [
             'path'          =>  $path,
-            'callable'      =>  $callable,
+            'callable'      =>  [$context['instance'], $context['method']],
             'methods'       =>  $methods,
-            'domains'       =>  $domains,
-            'middlewares'   =>  $middlewares,
+            'domains'       =>  $context['domains'],
+            'middlewares'   =>  $context['middlewares'],
+            'validate'      =>  $context['validate'],
         ]) - 1;
         // 循环域名，并根据路径保存到域名下
-        foreach ($domains as $domain) {
+        foreach ($context['domains'] as $domain) {
             $router['domains'][$domain][$path] = $routeId;
         }
         // 返回索引
@@ -77,7 +78,7 @@ class Application
      */
     public function getRoute(string $path, string $domain) : ?array
     {
-        foreach (array_keys($this->router['domains']) as $value) {
+        foreach (array_keys($this->router['domains'] ?? []) as $value) {
             if ($value == '*' || preg_match('/^' . str_replace('*', '[a-zA-Z0-9-]+', $value) . '$/', $domain)) {
                 if (isset($this->router['domains'][$value][$path])) {
                     return $this->router['routes'][$this->router['domains'][$value][$path]];
@@ -126,6 +127,7 @@ class Application
      */
     public function start(array $settings = [])
     {
+        // print_r($this->router);
         $server = new \Swoole\Http\Server('0.0.0.0', 80);
         $server->set(array_merge([
             'pid_file'      =>  $this->basePath . '/pid',

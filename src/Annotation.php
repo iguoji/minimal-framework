@@ -91,8 +91,14 @@ class Annotation
             }
             // 类名和标签
             $annoClass = $attr->getName();
-            $annoTag = strtolower(substr($annoClass, strrpos($annoClass, '\\') + 1));
+            $annoTag = substr($annoClass, strrpos($annoClass, '\\') + 1);
+            $builtInClass = 'Minimal\\Annotations\\' . $annoTag;
+            $annoTag = strtolower($annoTag);
             $annoArgs = $attr->getArguments();
+            // 目的是内置注解，因为用户没有Use，所以附带了用户的命名空间
+            if (!class_exists($annoClass) && class_exists($builtInClass)) {
+                $annoClass = $builtInClass;
+            }
             // 无效注解类，当作全局属性
             if (!class_exists($annoClass) || !in_array(AnnotationInterface::class, class_implements($annoClass))) {
                 $context[$annoTag] = $annoArgs;
@@ -123,8 +129,8 @@ class Annotation
             if (in_array($context['target'], $ins->getTargets())) {
                 // 执行注解功能
                 $result = $ins->handle($context);
-                if (!is_null($result)) {
-                    $context[$ins::class] = $result;
+                if (!is_null($result) && !is_null($ins->getContextKey())) {
+                    $context[$ins->getContextKey()] = $result;
                 }
             } else {
                 $notRunIns[] = $ins;

@@ -63,6 +63,7 @@ class OnRequest implements ListenerInterface
                     throw new RuntimeException('api not found');
                 }
                 if (!in_array(strtoupper($req->server['request_method']), $route['methods'])) {
+                    var_dump($req->server['request_method'], $route['methods']);
                     throw new RuntimeException('method not allowed');
                 }
                 // 中间件
@@ -73,9 +74,13 @@ class OnRequest implements ListenerInterface
                     };
                 }, $next);
                 $callback();
-                // 调用控制器
+                // 回调拆分
                 [$controller, $action] = $route['callable'];
-                // $result = (new $controller())->$action($req, $res);
+                // 验证器
+                if (isset($route['validate']) && method_exists($route['validate'], $action)) {
+                    $route['validate']->$action($req);
+                }
+                // 调用控制器
                 $result = $controller->$action($req, $res);
                 // 触发事件
                 $this->app->trigger('Server:OnRequestAfter', [$req, $res, $result]);
@@ -100,7 +105,7 @@ class OnRequest implements ListenerInterface
                 $res->status(200);
                 $res->header('Content-Type', 'application/json;charset=utf-8');
                 $res->end(json_encode([
-                    'code'      =>  $th->getCode() ?: 200,
+                    'code'      =>  $th->getCode() ?: 500,
                     'message'   =>  $th->getMessage(),
                     'data'      =>  method_exists($th, 'getData') ? $th->getData() : [],
                 ]));

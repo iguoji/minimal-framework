@@ -6,6 +6,7 @@ namespace Minimal\Contracts;
 interface Annotation
 {
     public function handle(array $context) : mixed;
+    public function getContextKey() : ?string;
     public function getTargets() : array;
     public function getPriority() : int;
 }

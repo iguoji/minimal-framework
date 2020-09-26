@@ -20,6 +20,14 @@ class Route implements Annotation
     {}
 
     /**
+     * 获取在上下文中的Key
+     */
+    public function getContextKey() : ?string
+    {
+        return null;
+    }
+
+    /**
      * 获取目标
      */
     public function getTargets() : array
@@ -42,10 +50,8 @@ class Route implements Annotation
     {
         return $this->app->addRoute(
             $this->path,
-            $this->methods,
-            [$context['instance'], $context['method']],
-            $context[Domain::class] ?? ['*'],
-            $context[Middleware::class] ?? [],
+            array_map(fn($method) => strtoupper($method), $this->methods),
+            $context,
         );
     }
 }
