@@ -50,7 +50,7 @@ class Route implements Annotation
     {
         return $this->app->addRoute(
             $this->path,
-            array_map(fn($method) => strtoupper($method), $this->methods),
+            array_map(fn($s) => strtoupper($s), $this->methods),
             $context,
         );
     }

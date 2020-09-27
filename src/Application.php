@@ -3,13 +3,7 @@ declare(strict_types=1);
 
 namespace Minimal;
 
-use Attribute;
-use ReflectionClass;
-use ReflectionMethod;
-use InvalidArgumentException;
-use UnexpectedValueException;
-use Minimal\Contracts\Listener;
-
+use RuntimeException;
 
 /**
  * 应用类
@@ -61,12 +55,12 @@ class Application
             'path'          =>  $path,
             'callable'      =>  [$context['instance'], $context['method']],
             'methods'       =>  $methods,
-            'domains'       =>  $context['domains'],
-            'middlewares'   =>  $context['middlewares'],
+            'domains'       =>  $context['domains'] ?? ['*'],
+            'middlewares'   =>  $context['middlewares'] ?? [],
             'validate'      =>  $context['validate'],
         ]) - 1;
         // 循环域名，并根据路径保存到域名下
-        foreach ($context['domains'] as $domain) {
+        foreach ($context['domains'] ?? ['*'] as $domain) {
             $router['domains'][$domain][$path] = $routeId;
         }
         // 返回索引
@@ -123,45 +117,16 @@ class Application
     }
 
     /**
-     * 启动应用
+     * 未知函数
+     * 转向事件触发
      */
-    public function start(array $settings = [])
+    public function __call(string $method, array $arguments)
     {
-        // print_r($this->router);
-        $server = new \Swoole\Http\Server('0.0.0.0', 80);
-        $server->set(array_merge([
-            'pid_file'      =>  $this->basePath . '/pid',
-            'worker_num'    =>  swoole_cpu_num(),
-            'reload_async'  =>  true,
-            'max_wait_time' =>  60,
-        ], $settings));
-        foreach([
-            'Start'             =>  'Server:OnStart',
-            'Shutdown'          =>  'Server:OnShutdown',
-            'WorkerStart'       =>  'Server:OnWorkerStart',
-            'WorkerStop'        =>  'Server:OnWorkerStop',
-            'WorkerExit'        =>  'Server:OnWorkerExit',
-            'Request'           =>  'Server:OnRequest',
-            'Connect'           =>  'Server:OnConnect',
-            // 'Receive'           =>  'Server:OnReceive',
-            // 'Packet'            =>  'Server:OnPacket',
-            'Close'             =>  'Server:OnClose',
-            'HandShake'         =>  'Server:OnHandShake',
-            'Open'              =>  'Server:OnOpen',
-            'Message'           =>  'Server:OnMessage',
-            'Task'              =>  'Server:OnTask',
-            'Finish'            =>  'Server:OnFinish',
-            'PipeMessage'       =>  'Server:OnPipeMessage',
-            'WorkerError'       =>  'Server:OnWorkerError',
-            'ManagerStart'      =>  'Server:OnManagerStart',
-            'ManagerStop'       =>  'Server:OnManagerStop',
-            'BeforeReload'      =>  'Server:OnBeforeReload',
-            'AfterReload'       =>  'Server:OnAfterReload',
-        ] as $swooleEvent => $minimalEvent) {
-            $server->on($swooleEvent, function(...$arguments) use($minimalEvent) {
-                $this->trigger($minimalEvent, $arguments);
-            });
-        };
-        $server->start();
+        $eventName = 'Application:On' . ucfirst($method);
+        if (isset($this->events[$eventName])) {
+            $this->trigger($eventName, ...$arguments);
+        } else {
+            throw new RuntimeException(sprintf('call to undefined method Minimal\Application::%s()', $method));
+        }
     }
 }

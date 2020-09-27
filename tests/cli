@@ -10,4 +10,6 @@ $app = new Minimal\Application(__DIR__);
 $after = round(memory_get_usage()/1024/1024, 2);
 echo '运行后内存：'.$after.'MB，相差：' . ($after - $before) . 'MB', PHP_EOL;
 
-$app->start();
+$app->start([
+    'pid_file'  =>  __DIR__ . '/pid',
+]);

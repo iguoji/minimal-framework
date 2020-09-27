@@ -78,7 +78,8 @@ class OnRequest implements ListenerInterface
                 [$controller, $action] = $route['callable'];
                 // 验证器
                 if (isset($route['validate']) && method_exists($route['validate'], $action)) {
-                    $route['validate']->$action($req);
+                    $rules = $route['validate']->setRequest($req)->setData(array_merge($req->get ?? [], $req->post ?? []))->$action();
+                    $req->data = $route['validate']->check($rules);
                 }
                 // 调用控制器
                 $result = $controller->$action($req, $res);
@@ -107,6 +108,8 @@ class OnRequest implements ListenerInterface
                 $res->end(json_encode([
                     'code'      =>  $th->getCode() ?: 500,
                     'message'   =>  $th->getMessage(),
+                    'file'      =>  $th->getFile(),
+                    'line'      =>  $th->getLine(),
                     'data'      =>  method_exists($th, 'getData') ? $th->getData() : [],
                 ]));
             }

@@ -44,32 +44,18 @@ class Brand extends Validate
     ];
 
     /**
-     * 信息
-     */
-    protected array $messages = [
-        'id.required'   =>  '很抱歉、请提供编号！',
-        'name.required' =>  '很抱歉、名称必须填写！',
-    ];
-
-    /**
      * 保存
      */
-    public function save($req)
+    public function save() : array
     {
-        return $req->data = $this->check(
-            array_merge($req->get ?? [], $req->post ?? []),
-            ['sort', 'name' => 'required', 'en_name', 'desc', 'en_desc', 'icon', 'created_at'],
-        );
+        return ['sort' => 'default', 'name' => 'required', 'en_name', 'desc', 'en_desc', 'icon', 'created_at' => 'default'];
     }
 
     /**
      * 编辑
      */
-    public function edit($req)
+    public function edit() : array
     {
-        return $this->check(
-            array_merge($req->get ?? [], $req->post ?? []),
-            ['id' => 'required', 'sort', 'name' => 'required', 'en_name', 'desc', 'en_desc', 'icon', 'created_at', 'updated_at'],
-        );
+        return ['id' => 'required', 'sort', 'name' => 'required', 'en_name', 'desc', 'en_desc', 'icon', 'updated_at' => 'default'];
     }
 }
