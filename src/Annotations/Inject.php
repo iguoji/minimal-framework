@@ -49,8 +49,8 @@ class Inject implements Annotation
     public function handle(array $context) : mixed
     {
         $this->interface = $this->interface ?: $context['class'];
-        $this->alias = strtolower(basename(str_replace('\\', '/', $context['class'])));
-        $ins = $this->container->make($context['class']);
+        $this->alias = $this->alias ?: strtolower(basename(str_replace('\\', '/', $context['class'])));
+        $ins = $context['instance'] ?? $this->container->make($context['class']);
         $this->container->set($this->interface, $ins);
         if (!empty($this->alias)) {
             $this->container->setAlias($this->alias, $this->interface);

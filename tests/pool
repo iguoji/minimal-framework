@@ -12,18 +12,25 @@ date_default_timezone_set('Asia/Shanghai');
 try {
     printf('Before Memory: %sMB' . PHP_EOL, $before = round(memory_get_usage()/1024/1024, 2));
 
-    $app = new Minimal\Application(__DIR__);
+    // 配置对象
+    $config = new Minimal\Config([
+        'db'    =>  require __DIR__ . '/config/db.php'
+    ]);
 
-    $app->on('Server:OnRequestAfter', function() use($before){
-        printf('Request Memory: %sMB, Use: %sMB' . PHP_EOL, $after = round(memory_get_usage()/1024/1024, 2), $after - $before);
+    // 数据库对象
+    $database = new Minimal\Database($config);
+
+    Swoole\Coroutine::create(function() use($database){
+        try {
+            $pdo = $database->connection();
+        } catch (\Throwable $th) {
+            echo 'Exception::' . $th->getMessage() . PHP_EOL;
+            echo 'File::' . $th->getFile() . PHP_EOL;
+            echo 'Line::' . $th->getLine() . PHP_EOL;
+        }
     });
 
     printf('Framework Memory: %sMB, Use: %sMB' . PHP_EOL, $after = round(memory_get_usage()/1024/1024, 2), $after - $before);
-
-    $app->start([
-        'pid_file'  =>  __DIR__ . '/pid',
-    ]);
-
 } catch (\Throwable $th) {
     echo 'Exception::' . $th->getMessage() . PHP_EOL;
     echo 'File::' . $th->getFile() . PHP_EOL;

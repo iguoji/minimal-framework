@@ -40,7 +40,7 @@ class Route implements Annotation
      */
     public function getPriority() : int
     {
-        return 0;
+        return -1;
     }
 
     /**
@@ -48,6 +48,8 @@ class Route implements Annotation
      */
     public function handle(array $context) : mixed
     {
+        $context['domains'] = isset($context['domain']) ? $context['domain'][0] : ['*'];
+        $context['middlewares'] = isset($context['middleware']) ? $context['middleware'][0] : [];
         return $this->app->addRoute(
             $this->path,
             array_map(fn($s) => strtoupper($s), $this->methods),

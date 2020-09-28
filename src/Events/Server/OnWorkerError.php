@@ -33,6 +33,9 @@ class OnWorkerError implements ListenerInterface
     {
         // 错误信息
         $error = error_get_last();
+        var_dump($error);
+        array_shift($arguments);
+        var_dump($arguments);
         // 打印信息
         // $this->log->error(__CLASS__ . '::' . $event, $error ?? []);
         // 继续执行

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Minimal;
 
+use Closure;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionFunction;
@@ -109,15 +110,16 @@ class Container
      * @param $callable className::methodName
      * @param $callable [className, methodName]
      * @param $callable [classInstance, methodName]
+     * @param $callable Closure
      */
     public function call($callable, ...$parameters)
     {
-        // 类的方法
-        $method = new ReflectionMethod(...$callable);
+        // 方法/函数反射对象
+        $reflection = $callable instanceof Closure ? new ReflectionFunction($callable) : new ReflectionMethod(...$callable);
         // 上下文$this
         $context = $this;
-        // 静态方法
-        if ($method->isStatic()) {
+        // 根据情况判断是否需要调用者
+        if ($reflection instanceof ReflectionFunction || $reflection->isStatic()) {
             // 不需调用者
             $context = null;
         } else if (is_array($callable) && is_object($callable[0])) {
@@ -128,11 +130,11 @@ class Container
             $context = $this->newInstance($callable[0]);
         }
         // 解析参数
-        $invokeParams = $this->getParameters($method);
+        $invokeParams = $this->getParameters($reflection);
         // 合并参数
         $parameters = array_merge($invokeParams, $parameters);
         // 返回结果
-        return $method->invoke($context, ...$parameters);
+        return $reflection->invoke($context, ...$parameters);
     }
 
     /**

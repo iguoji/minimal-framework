@@ -44,7 +44,7 @@ class OnRequest implements ListenerInterface
         // 处理请求
         Coroutine::create(function() use($req, $res){
             // 控制输出
-            ob_start();
+            // ob_start();
             try {
                 // 触发事件
                 $this->app->trigger('Server:OnRequestBefore', [$req, $res]);
@@ -94,6 +94,10 @@ class OnRequest implements ListenerInterface
                     'data'      =>  $result,
                 ]));
             } catch (Throwable $th) {
+                echo 'Exception::' . __CLASS__ . PHP_EOL;
+                echo 'Message::' . $th->getMessage() . PHP_EOL;
+                echo 'File::' . $th->getFile() . PHP_EOL;
+                echo 'Line::' . $th->getLine() . PHP_EOL;
                 // 触发事件
                 $this->app->trigger('Server:OnRequestAfter', [$req, $res, [], $th]);
                 // 记录日志
@@ -114,7 +118,7 @@ class OnRequest implements ListenerInterface
                 ]));
             }
             // 刷新输出
-            ob_end_flush();
+            // ob_end_flush();
         });
         // 继续执行
         return true;

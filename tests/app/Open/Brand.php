@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Open;
 
+use Minimal\Facades\Db;
+
 /**
  * 品牌类
  */
@@ -15,7 +17,13 @@ class Brand
     #[Route('/brand/save')]
     public function save($req, $res)
     {
-        return $req;
+        return [
+            // Db::query('SELECT * FROM `brand` WHERE `id` = ?', [1]),
+            // Db::first('SELECT * FROM `brand` WHERE `id` = ?', [2]),
+            // Db::number('SELECT COUNT(*) FROM `brand`'),
+            // Db::number('SELECT SUM(`id`) FROM `brand`'),
+            // Db::number('SELECT SUM(`id`) AS `count` FROM `brand`')
+        ];
     }
 
     /**
