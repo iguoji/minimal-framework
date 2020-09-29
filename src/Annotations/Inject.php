@@ -4,14 +4,14 @@ declare(strict_types=1);
 namespace Minimal\Annotations;
 
 use Attribute;
-use Minimal\Container;
-use Minimal\Contracts\Annotation;
+use Minimal\Container\Container;
+use Minimal\Annotation\AnnotationInterface;
 
 /**
  * 依赖注册到容器
  */
 #[Attribute(Attribute::TARGET_CLASS)]
-class Inject implements Annotation
+class Inject implements AnnotationInterface
 {
     /**
      * 构造函数

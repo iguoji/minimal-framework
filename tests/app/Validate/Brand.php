@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Validate;
 
-use Minimal\Validate;
+use Minimal\Validate\Validate;
 
 /**
  * 品牌验证器
@@ -48,7 +48,8 @@ class Brand extends Validate
      */
     public function save() : array
     {
-        return ['sort' => 'default', 'name' => 'required', 'en_name', 'desc', 'en_desc', 'icon', 'created_at' => 'default'];
+        // return ['sort' => 'default', 'name' => 'required', 'en_name', 'desc', 'en_desc', 'icon', 'created_at' => 'default'];
+        return ['sort' => 'default', 'name', 'en_name', 'desc', 'en_desc', 'icon', 'created_at' => 'default'];
     }
 
     /**

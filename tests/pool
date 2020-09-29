@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
-require_once '../vendor/autoload.php';
-
+// 自动加载
+require_once dirname(__DIR__) . '/vendor/autoload.php';
 // 显示错误
 ini_set('display_errors', 'stderr');
 // 报告错误
@@ -10,27 +10,46 @@ error_reporting(E_ALL);
 date_default_timezone_set('Asia/Shanghai');
 
 try {
-    printf('Before Memory: %sMB' . PHP_EOL, $before = round(memory_get_usage()/1024/1024, 2));
 
-    // 配置对象
-    $config = new Minimal\Config([
-        'db'    =>  require __DIR__ . '/config/db.php'
-    ]);
+    $database = null;
 
-    // 数据库对象
-    $database = new Minimal\Database($config);
+    $server = new Swoole\Http\Server('0.0.0.0', 8080);
 
-    Swoole\Coroutine::create(function() use($database){
-        try {
-            $pdo = $database->connection();
-        } catch (\Throwable $th) {
-            echo 'Exception::' . $th->getMessage() . PHP_EOL;
-            echo 'File::' . $th->getFile() . PHP_EOL;
-            echo 'Line::' . $th->getLine() . PHP_EOL;
-        }
+    $server->on('Start', function($server){
+        printf('OnStart:: MasterPid: %s, ManagerPid: %s' . PHP_EOL, $server->master_pid, $server->manager_pid);
     });
 
-    printf('Framework Memory: %sMB, Use: %sMB' . PHP_EOL, $after = round(memory_get_usage()/1024/1024, 2), $after - $before);
+    $server->on('WorkerStart', function($server, $workerId) use(&$database){
+        printf('OnWorkerStart:: WorkerId: %s' . PHP_EOL, $workerId);
+        // Swoole\Coroutine::create(function() use($server){
+            $server->database = $database = new Minimal\Database\Manager([
+                'pool'          =>  [
+                    'master'        =>  150,
+                    'slave'         =>  0,
+                ],
+                'default'       =>  [
+                    'host'          =>  '192.168.2.12',
+                    'port'          =>  3306,
+                    'dbname'        =>  'mall_com',
+                    'username'      =>  'root',
+                    'password'      =>  '123456',
+                    'charset'       =>  'utf8mb4',
+                    'collation'     =>  'utf8mb4_unicode_ci',
+                    'timeout'       =>  2,
+                ],
+                'cluster'       =>  [
+                    'master'        =>  [],
+                    'slave'         =>  [],
+                ],
+            ]);
+        // });
+    });
+    $server->on('request', function($req, $res) use($server, $database){
+        var_dump($database, $server->database);
+        $res->end('hello world');
+    });
+    $server->start();
+
 } catch (\Throwable $th) {
     echo 'Exception::' . $th->getMessage() . PHP_EOL;
     echo 'File::' . $th->getFile() . PHP_EOL;

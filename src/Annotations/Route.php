@@ -5,13 +5,13 @@ namespace Minimal\Annotations;
 
 use Attribute;
 use Minimal\Application;
-use Minimal\Contracts\Annotation;
+use Minimal\Annotation\AnnotationInterface;
 
 /**
  * 添加路由
  */
 #[Attribute(Attribute::TARGET_METHOD)]
-class Route implements Annotation
+class Route implements AnnotationInterface
 {
     /**
      * 构造函数

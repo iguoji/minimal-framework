@@ -5,16 +5,16 @@ namespace Minimal\Annotations;
 
 use Attribute;
 use UnexpectedValueException;
-use Minimal\Container;
+use Minimal\Container\Container;
 use Minimal\Application;
-use Minimal\Contracts\Annotation;
+use Minimal\Annotation\AnnotationInterface;
 use Minimal\Contracts\Listener as ListenerInterface;
 
 /**
  * 绑定事件
  */
 #[Attribute]
-class Listener implements Annotation
+class Listener implements AnnotationInterface
 {
     /**
      * 构造函数

@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
-require_once '../vendor/autoload.php';
-
+// 自动加载
+require_once dirname(__DIR__) . '/vendor/autoload.php';
 // 显示错误
 ini_set('display_errors', 'stderr');
 // 报告错误
@@ -13,10 +13,6 @@ try {
     printf('Before Memory: %sMB' . PHP_EOL, $before = round(memory_get_usage()/1024/1024, 2));
 
     $app = new Minimal\Application(__DIR__);
-
-    $app->on('Server:OnRequestAfter', function() use($before){
-        printf('Request Memory: %sMB, Use: %sMB' . PHP_EOL, $after = round(memory_get_usage()/1024/1024, 2), $after - $before);
-    });
 
     printf('Framework Memory: %sMB, Use: %sMB' . PHP_EOL, $after = round(memory_get_usage()/1024/1024, 2), $after - $before);
 

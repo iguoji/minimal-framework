@@ -4,7 +4,12 @@
     "keywords": ["framework", "swoole", "php"],
     "homepage": "https://github.com/iguoji/minimal",
     "require": {
-        "php": ">=8.0.0"
+        "php": ">=8.0.0",
+        "iguoji/minimal-annotation": "dev-master",
+        "iguoji/minimal-validate": "dev-master",
+        "iguoji/minimal-container": "dev-master",
+        "iguoji/minimal-support": "dev-master",
+        "iguoji/minimal-database": "dev-master"
     },
     "autoload": {
         "psr-4": {
@@ -14,6 +19,43 @@
     "autoload-dev": {
         "psr-4": {
             "App\\": "tests/app/"
+        }
+    },
+    "repositories": {
+        "iguoji/minimal-annotation": {
+            "type": "path",
+            "url": "/home/wwwroot/minimal/annotation",
+            "options": {
+                "symlink": true
+            }
+        },
+        "iguoji/minimal-validate": {
+            "type": "path",
+            "url": "/home/wwwroot/minimal/validate",
+            "options": {
+                "symlink": true
+            }
+        },
+        "iguoji/minimal-container": {
+            "type": "path",
+            "url": "/home/wwwroot/minimal/container",
+            "options": {
+                "symlink": true
+            }
+        },
+        "iguoji/minimal-support": {
+            "type": "path",
+            "url": "/home/wwwroot/minimal/support",
+            "options": {
+                "symlink": true
+            }
+        },
+        "iguoji/minimal-database": {
+            "type": "path",
+            "url": "/home/wwwroot/minimal/database",
+            "options": {
+                "symlink": true
+            }
         }
     }
 }

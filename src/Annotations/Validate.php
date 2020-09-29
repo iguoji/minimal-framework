@@ -4,14 +4,14 @@ declare(strict_types=1);
 namespace Minimal\Annotations;
 
 use Attribute;
-use Minimal\Container;
-use Minimal\Contracts\Annotation;
+use Minimal\Container\Container;
+use Minimal\Annotation\AnnotationInterface;
 
 /**
  * 验证器
  */
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_METHOD)]
-class Validate implements Annotation
+class Validate implements AnnotationInterface
 {
     /**
      * 构造函数

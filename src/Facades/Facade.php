@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Minimal\Contracts;
+namespace Minimal\Facades;
 
-use Minimal\Container;
+use Psr\Container\ContainerInterface;
 
 /**
  * 门面类
@@ -13,12 +13,12 @@ abstract class Facade
     /**
      * 容器对象
      */
-    protected static Container $container;
+    protected static ContainerInterface $container;
 
     /**
      * 注册容器
      */
-    public static function setContainer(Container $container)
+    public static function setContainer(ContainerInterface $container)
     {
         self::$container = $container;
     }

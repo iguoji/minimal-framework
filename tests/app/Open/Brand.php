@@ -14,15 +14,15 @@ class Brand
     /**
      * 保存品牌
      */
-    #[Route('/brand/save')]
+    #[Route('/brand/save', ['GET', 'POST'])]
     public function save($req, $res)
     {
         return [
-            // Db::query('SELECT * FROM `brand` WHERE `id` = ?', [1]),
-            // Db::first('SELECT * FROM `brand` WHERE `id` = ?', [2]),
-            // Db::number('SELECT COUNT(*) FROM `brand`'),
-            // Db::number('SELECT SUM(`id`) FROM `brand`'),
-            // Db::number('SELECT SUM(`id`) AS `count` FROM `brand`')
+            Db::query('SELECT * FROM `brand` WHERE `id` = ?', [1]),
+            Db::first('SELECT * FROM `brand` WHERE `id` = ?', [2]),
+            Db::number('SELECT COUNT(*) FROM `brand`'),
+            Db::number('SELECT SUM(`id`) FROM `brand`'),
+            Db::number('SELECT SUM(`id`) AS `count` FROM `brand`'),
         ];
     }
 
