@@ -21,41 +21,5 @@
             "App\\": "tests/app/"
         }
     },
-    "repositories": {
-        "iguoji/minimal-annotation": {
-            "type": "path",
-            "url": "/home/wwwroot/minimal/annotation",
-            "options": {
-                "symlink": true
-            }
-        },
-        "iguoji/minimal-validate": {
-            "type": "path",
-            "url": "/home/wwwroot/minimal/validate",
-            "options": {
-                "symlink": true
-            }
-        },
-        "iguoji/minimal-container": {
-            "type": "path",
-            "url": "/home/wwwroot/minimal/container",
-            "options": {
-                "symlink": true
-            }
-        },
-        "iguoji/minimal-support": {
-            "type": "path",
-            "url": "/home/wwwroot/minimal/support",
-            "options": {
-                "symlink": true
-            }
-        },
-        "iguoji/minimal-database": {
-            "type": "path",
-            "url": "/home/wwwroot/minimal/database",
-            "options": {
-                "symlink": true
-            }
-        }
-    }
+    "minimum-stability": "dev"
 }

@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace Minimal\Events\Server;
 
+use Minimal\Config;
+use Minimal\Container\Container;
+use Minimal\Database\Manager as Database;
 use Minimal\Annotations\Listener;
 use Minimal\Contracts\Listener as ListenerInterface;
 
@@ -15,7 +18,7 @@ class OnWorkerStart implements ListenerInterface
     /**
      * 构造函数
      */
-    public function __construct()
+    public function __construct(protected Container $container, protected Config $config)
     {}
 
     /**
@@ -31,12 +34,22 @@ class OnWorkerStart implements ListenerInterface
      */
     public function handle(string $event, array $arguments = []) : bool
     {
+        // 服务对象
+        $server = $arguments[0];
         // 进程编号
         $workerId = $arguments[1];
         // 输出信息
         // $this->log->notice('worker #' . $workerId . ' started');
+
+        // 数据库对象
+        $configs = $this->config->get('db', []);
+        $configs['worker_num'] = $server->setting['worker_num'];
+        $this->container->set('db', new Database($configs));
+
         // 调整标题
         cli_set_process_title(sprintf('php swoole http server worker #%s', $workerId));
+        // 内存信息
+        printf('Memory: %sMB' . PHP_EOL, round(memory_get_usage()/1024/1024, 2));
         // 继续执行
         return true;
     }

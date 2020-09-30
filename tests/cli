@@ -10,11 +10,11 @@ error_reporting(E_ALL);
 date_default_timezone_set('Asia/Shanghai');
 
 try {
-    printf('Before Memory: %sMB' . PHP_EOL, $before = round(memory_get_usage()/1024/1024, 2));
+    printf('Memory: %sMB' . PHP_EOL, $before = round(memory_get_usage()/1024/1024, 2));
 
     $app = new Minimal\Application(__DIR__);
 
-    printf('Framework Memory: %sMB, Use: %sMB' . PHP_EOL, $after = round(memory_get_usage()/1024/1024, 2), $after - $before);
+    printf('Memory: %sMB, Framework: %sMB' . PHP_EOL, $after = round(memory_get_usage()/1024/1024, 2), $after - $before);
 
     $app->start([
         'pid_file'  =>  __DIR__ . '/pid',

@@ -11,42 +11,35 @@ date_default_timezone_set('Asia/Shanghai');
 
 try {
 
-    $database = null;
-
     $server = new Swoole\Http\Server('0.0.0.0', 8080);
 
     $server->on('Start', function($server){
         printf('OnStart:: MasterPid: %s, ManagerPid: %s' . PHP_EOL, $server->master_pid, $server->manager_pid);
     });
 
-    $server->on('WorkerStart', function($server, $workerId) use(&$database){
+    $server->on('WorkerStart', function($server, $workerId){
         printf('OnWorkerStart:: WorkerId: %s' . PHP_EOL, $workerId);
-        // Swoole\Coroutine::create(function() use($server){
-            $server->database = $database = new Minimal\Database\Manager([
-                'pool'          =>  [
-                    'master'        =>  150,
-                    'slave'         =>  0,
-                ],
-                'default'       =>  [
-                    'host'          =>  '192.168.2.12',
-                    'port'          =>  3306,
-                    'dbname'        =>  'mall_com',
-                    'username'      =>  'root',
-                    'password'      =>  '123456',
-                    'charset'       =>  'utf8mb4',
-                    'collation'     =>  'utf8mb4_unicode_ci',
-                    'timeout'       =>  2,
-                ],
-                'cluster'       =>  [
-                    'master'        =>  [],
-                    'slave'         =>  [],
-                ],
-            ]);
-        // });
+        $configs = require __DIR__ . '/config/db.php';
+        $configs['worker_num'] = $server->setting['worker_num'];
+        $server->database = new Minimal\Database\Manager($configs, $workerId);
     });
-    $server->on('request', function($req, $res) use($server, $database){
-        var_dump($database, $server->database);
-        $res->end('hello world');
+    $server->on('request', function($req, $res) use($server){
+        try {
+
+            var_dump($server->database);
+            $res->status(200);
+            $res->header('Content-Type', 'application/json;charset=utf-8');
+            $res->end(json_encode([
+                $server->database->query('SELECT * FROM `brand` WHERE id = ?', [1]),
+                $server->database->query('SELECT `id`, `name` FROM `brand` WHERE id = ?', [2]),
+            ]));
+        } catch (\Throwable $th) {
+            echo $th->getMessage(), PHP_EOL;
+            echo $th->getFile(), PHP_EOL;
+            echo $th->getLine(), PHP_EOL;
+            print_r($th->getTrace());
+            echo PHP_EOL;
+        }
     });
     $server->start();
 
