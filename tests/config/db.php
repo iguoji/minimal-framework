@@ -7,7 +7,6 @@ return [
         'slave'         =>  0,
     ],
     'default'       =>  [
-        'handle'        =>  Minimal\Database\Proxy::class,
         'host'          =>  '192.168.2.12',
         'port'          =>  3306,
         'dbname'        =>  'mall_com',

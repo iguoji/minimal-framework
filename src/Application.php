@@ -59,8 +59,6 @@ class Application
         }
         $config = new Config($configs);
         $this->container->set('config', $config);
-        // 数据库
-        // $this->container->set('db', new Database($config->get('db', [])));
         // 注解处理
         $annotation = new Annotation($this->container);
         $annotation->scan(__DIR__, [

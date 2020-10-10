@@ -98,6 +98,7 @@ class OnRequest implements ListenerInterface
                 echo 'Message::' . $th->getMessage() . PHP_EOL;
                 echo 'File::' . $th->getFile() . PHP_EOL;
                 echo 'Line::' . $th->getLine() . PHP_EOL;
+                print_r($th->getTrace());
                 // 触发事件
                 $this->app->trigger('Server:OnRequestAfter', [$req, $res, [], $th]);
                 // 记录日志
