@@ -63,7 +63,6 @@ class OnRequest implements ListenerInterface
                     throw new RuntimeException('api not found');
                 }
                 if (!in_array(strtoupper($req->server['request_method']), $route['methods'])) {
-                    var_dump($req->server['request_method'], $route['methods']);
                     throw new RuntimeException('method not allowed');
                 }
                 // 中间件

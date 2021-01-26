@@ -1,5 +1,6 @@
 {
     "name": "iguoji/minimal",
+    "type": "library",
     "description": "a minimalism swoole framework",
     "keywords": ["framework", "swoole", "php"],
     "homepage": "https://github.com/iguoji/minimal",

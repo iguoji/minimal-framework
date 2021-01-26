@@ -32,10 +32,24 @@ class OnWorkerError implements ListenerInterface
     public function handle(string $event, array $arguments = []) : bool
     {
         // 错误信息
-        $error = error_get_last();
-        var_dump($error);
-        array_shift($arguments);
-        var_dump($arguments);
+        if ($error = error_get_last()) {
+            var_dump($error);
+        }
+
+        /**
+         * array(4) {
+            [0]=>
+            int(0)
+            [1]=>
+            int(12500)
+            [2]=>
+            int(255)
+            [3]=>
+            int(0)
+           }
+         */
+        // array_shift($arguments);
+        // var_dump($arguments);
         // 打印信息
         // $this->log->error(__CLASS__ . '::' . $event, $error ?? []);
         // 继续执行

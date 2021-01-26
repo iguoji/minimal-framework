@@ -48,8 +48,6 @@ class OnWorkerStart implements ListenerInterface
 
         // 调整标题
         cli_set_process_title(sprintf('php swoole http server worker #%s', $workerId));
-        // 内存信息
-        printf('Memory: %sMB' . PHP_EOL, round(memory_get_usage()/1024/1024, 2));
         // 继续执行
         return true;
     }

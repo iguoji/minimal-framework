@@ -9,7 +9,7 @@ return [
     'default'       =>  [
         'host'          =>  '192.168.2.12',
         'port'          =>  3306,
-        'dbname'        =>  'mall_com',
+        'dbname'        =>  'pk10',
         'username'      =>  'root',
         'password'      =>  '123456',
         'charset'       =>  'utf8mb4',

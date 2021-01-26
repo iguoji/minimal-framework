@@ -8,7 +8,6 @@ use RuntimeException;
 use Minimal\Facades\Facade;
 use Minimal\Container\Container;
 use Minimal\Annotation\Annotation;
-use Minimal\Database\Manager as Database;
 
 /**
  * 应用类
@@ -21,7 +20,7 @@ class Application
     protected Container $container;
 
     /**
-     * 路由器
+     * 路由器（含域名和路由列表）
      */
     protected array $router = [];
 
@@ -42,10 +41,12 @@ class Application
         // 捕获异常
         // set_exception_handler(fn($ex) => $this->container->log->error($ex->getMessage(), ['exception' => $ex]));
         set_exception_handler(function($th){
-            echo __CLASS__ . PHP_EOL;
-            echo 'Exception::' . $th->getMessage() . PHP_EOL;
+            echo '[ ' . date('Y-m-d H:i:s') . ' ] ' . __CLASS__ . PHP_EOL;
+            echo 'Messgae::' . $th->getMessage() . PHP_EOL;
             echo 'File::' . $th->getFile() . PHP_EOL;
             echo 'Line::' . $th->getLine() . PHP_EOL;
+            print_r($th->getTrace());
+            echo PHP_EOL;
         });
         // 容器对象
         $this->container = new Container();
@@ -61,12 +62,17 @@ class Application
         $this->container->set('config', $config);
         // 注解处理
         $annotation = new Annotation($this->container);
+        // 扫描：框架注解
         $annotation->scan(__DIR__, [
             'namespace' =>  __NAMESPACE__
         ]);
+        // 扫描：应用注解
         $annotation->scan($basePath);
         // 门面注入
         Facade::setContainer($this->container);
+
+        // 执行用户命令
+        $this->execute($_SERVER['argv']);
     }
 
     /**
@@ -75,20 +81,17 @@ class Application
     public function addRoute(string $path, array $methods = ['POST'], array $context = []) : int
     {
         // 全局路由器
-        $router = &$this->router;
-        $router['routes'] = $router['routes'] ?? [];
-        // 将路由添加到路由器并得到索引编号
-        $routeId = array_push($router['routes'], [
+        $this->router['routes'] = $this->router['routes'] ?? [];
+        // 路由对象
+        $route = array_merge($context, [
             'path'          =>  $path,
-            'callable'      =>  [$context['instance'], $context['method']],
             'methods'       =>  $methods,
-            'domains'       =>  $context['domains'],
-            'middlewares'   =>  $context['middlewares'],
-            'validate'      =>  $context['validate'],
-        ]) - 1;
+        ]);
+        // 添加路由并得到索引编号
+        $routeId = array_push($this->router['routes'], $route) - 1;
         // 循环域名，并根据路径保存到域名下
         foreach ($context['domains'] as $domain) {
-            $router['domains'][$domain][$path] = $routeId;
+            $this->router['domains'][$domain][$path] = $routeId;
         }
         // 返回索引
         return $routeId;
@@ -107,6 +110,14 @@ class Application
             }
         }
         return null;
+    }
+
+    /**
+     * 获取路由器
+     */
+    public function getRouter() : ?array
+    {
+        return $this->router;
     }
 
     /**
@@ -138,9 +149,39 @@ class Application
         foreach ($this->events[$eventName] ?? [] as $key => $array) {
             $result = $this->container->call($array['callable'], $eventName, ...$arguments);
             if ($result === false) {
+                echo $eventName, PHP_EOL;
                 break;
             }
         }
+    }
+
+    /**
+     * 执行命令
+     */
+    public function execute(array $argv) : void
+    {
+        $script = array_shift($argv);
+        $command = array_shift($argv);
+        if (is_null($command)) {
+            die(sprintf('Tips: php %s start [-key value]' . PHP_EOL, $script));
+        }
+        $arguments = [];
+        $lastKey = null;
+        foreach ($argv as $v) {
+            if (is_null($lastKey)) {
+                $lastKey = trim($v, '-');
+            } else if (0 === strpos($v, '-')) {
+                $arguments[$lastKey] = null;
+                $lastKey = trim($v, '-');
+            } else {
+                $arguments[$lastKey] = $v;
+                $lastKey = null;
+            }
+        }
+        if (!is_null($lastKey)) {
+            $arguments[$lastKey] = null;
+        }
+        $this->__call($command, [$arguments]);
     }
 
     /**

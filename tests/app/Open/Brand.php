@@ -15,9 +15,11 @@ class Brand
      * 保存品牌
      */
     #[Route('/brand/save', ['GET', 'POST'])]
+    #[TestAnno(1, NULL, false, 'debug')]
     public function save($req, $res)
     {
-        return [
+        return Db::table('account')->where('phone', 18721889831)->select();
+        /*return [
             Db::beginTransaction(),
             Db::execute('INSERT INTO `brand` VALUES(?, ?, ?, ?, ?, ?, ?, ?)', [null, 0, '标题', 'BiaoTi', '描述', 'MiaoSu', 'icon', date('Y-m-d H:i:s')]),
             Db::beginTransaction(),
@@ -30,7 +32,7 @@ class Brand
             Db::value('SELECT COUNT(*) FROM `brand`'),
             Db::value('SELECT SUM(`id`) FROM `brand`'),
             Db::value('SELECT SUM(`id`) AS `count` FROM `brand`'),
-        ];
+        ];*/
     }
 
     /**
