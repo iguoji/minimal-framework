@@ -1,9 +1,9 @@
 {
-    "name": "iguoji/minimal",
+    "name": "iguoji/minimal-framework",
     "type": "library",
     "description": "a minimalism swoole framework",
     "keywords": ["framework", "swoole", "php"],
-    "homepage": "https://github.com/iguoji/minimal",
+    "homepage": "https://github.com/iguoji/minimal-framework",
     "require": {
         "php": ">=8.0.0",
         "iguoji/minimal-annotation": "dev-master",
