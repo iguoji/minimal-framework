@@ -5,6 +5,7 @@ namespace Minimal\Events\Server;
 
 use Minimal\Config;
 use Minimal\Container\Container;
+use Minimal\Cache\Manager as Cache;
 use Minimal\Database\Manager as Database;
 use Minimal\Annotations\Listener;
 use Minimal\Contracts\Listener as ListenerInterface;
@@ -45,6 +46,11 @@ class OnWorkerStart implements ListenerInterface
         $configs = $this->config->get('db', []);
         $configs['worker_num'] = $server->setting['worker_num'];
         $this->container->set('db', new Database($configs));
+
+        // 缓存对象
+        $configs = $this->config->get('cache', []);
+        $configs['worker_num'] = $server->setting['worker_num'];
+        $this->container->set('cache', new Cache($configs));
 
         // 调整标题
         cli_set_process_title(sprintf('php swoole http server worker #%s', $workerId));

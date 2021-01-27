@@ -78,20 +78,23 @@ class OnRequest implements ListenerInterface
                 // 验证器
                 if (isset($route['validate']) && method_exists($route['validate'], $action)) {
                     $rules = $route['validate']->setRequest($req)->setData(array_merge($req->get ?? [], $req->post ?? []))->$action();
-                    $req->data = $route['validate']->check($rules);
+                    $req->params = $route['validate']->check($rules);
+                    $req->data = $route['validate']->filter($req->params);
                 }
                 // 调用控制器
                 $result = $controller->$action($req, $res);
                 // 触发事件
                 $this->app->trigger('Server:OnRequestAfter', [$req, $res, $result]);
                 // 输出结果
-                $res->status(200);
-                $res->header('Content-Type', 'application/json;charset=utf-8');
-                $res->end(json_encode([
-                    'code'      =>  200,
-                    'message'   =>  'success',
-                    'data'      =>  $result,
-                ]));
+                if (!is_null($result)) {
+                    $res->status(200);
+                    $res->header('Content-Type', 'application/json;charset=utf-8');
+                    $res->end(json_encode([
+                        'code'      =>  200,
+                        'message'   =>  '恭喜您、操作成功！',
+                        'data'      =>  $result,
+                    ]));
+                }
             } catch (Throwable $th) {
                 echo 'Exception::' . __CLASS__ . PHP_EOL;
                 echo 'Message::' . $th->getMessage() . PHP_EOL;

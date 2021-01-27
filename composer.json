@@ -10,7 +10,8 @@
         "iguoji/minimal-validate": "dev-master",
         "iguoji/minimal-container": "dev-master",
         "iguoji/minimal-support": "dev-master",
-        "iguoji/minimal-database": "dev-master"
+        "iguoji/minimal-database": "dev-master",
+        "iguoji/minimal-cache": "dev-master"
     },
     "autoload": {
         "psr-4": {

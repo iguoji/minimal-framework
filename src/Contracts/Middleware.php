@@ -14,5 +14,5 @@ interface Middleware
     /**
      * 处理程序
      */
-    public function handle(Request $req, Response $res, callable $next) : bool;
+    public function handle(Request $req, Response $res, callable $next);
 }

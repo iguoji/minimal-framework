@@ -70,9 +70,6 @@ class Application
         $annotation->scan($basePath);
         // 门面注入
         Facade::setContainer($this->container);
-
-        // 执行用户命令
-        $this->execute($_SERVER['argv']);
     }
 
     /**
@@ -158,8 +155,9 @@ class Application
     /**
      * 执行命令
      */
-    public function execute(array $argv) : void
+    public function execute(array $argv = []) : void
     {
+        $argv = $argv ?: $_SERVER['argv'];
         $script = array_shift($argv);
         $command = array_shift($argv);
         if (is_null($command)) {
