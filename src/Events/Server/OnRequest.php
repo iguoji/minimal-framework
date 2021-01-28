@@ -41,6 +41,7 @@ class OnRequest implements ListenerInterface
         $req = $arguments[0];
         // 响应对象
         $res = $arguments[1];
+
         // 处理请求
         Coroutine::create(function() use($req, $res){
             // 控制输出
@@ -48,6 +49,9 @@ class OnRequest implements ListenerInterface
             try {
                 // 触发事件
                 $this->app->trigger('Server:OnRequestBefore', [$req, $res]);
+                if (!$res->isWritable()) {
+                    return true;
+                }
                 // 域名主机
                 $host = $req->header['host'];
                 // 请求地址
@@ -75,16 +79,25 @@ class OnRequest implements ListenerInterface
                 $callback();
                 // 回调拆分
                 [$controller, $action] = $route['callable'];
-                // 验证器
+                // 验证器 - 前置检查
                 if (isset($route['validate']) && method_exists($route['validate'], $action)) {
-                    $rules = $route['validate']->setRequest($req)->setData(array_merge($req->get ?? [], $req->post ?? []))->$action();
-                    $req->params = $route['validate']->check($rules);
-                    $req->data = $route['validate']->filter($req->params);
+                    $req->params = $route['validate']->check(
+                        $route['validate']->$action(),
+                        array_merge($req->get ?? [], $req->post ?? [])
+                    );
                 }
                 // 调用控制器
                 $result = $controller->$action($req, $res);
+                if (!$res->isWritable()) {
+                    return true;
+                }
+
                 // 触发事件
                 $this->app->trigger('Server:OnRequestAfter', [$req, $res, $result]);
+                if (!$res->isWritable()) {
+                    return true;
+                }
+
                 // 输出结果
                 if (!is_null($result)) {
                     $res->status(200);
@@ -100,7 +113,6 @@ class OnRequest implements ListenerInterface
                 echo 'Message::' . $th->getMessage() . PHP_EOL;
                 echo 'File::' . $th->getFile() . PHP_EOL;
                 echo 'Line::' . $th->getLine() . PHP_EOL;
-                print_r($th->getTrace());
                 // 触发事件
                 $this->app->trigger('Server:OnRequestAfter', [$req, $res, [], $th]);
                 // 记录日志

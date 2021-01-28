@@ -48,6 +48,6 @@ class Validate implements AnnotationInterface
      */
     public function handle(array $context) : mixed
     {
-        return $this->container->make($this->class);
+        return $this->container->get($this->class);
     }
 }

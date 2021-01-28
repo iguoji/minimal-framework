@@ -49,13 +49,18 @@ class Route implements AnnotationInterface
     public function handle(array $context) : mixed
     {
         // 路径规则
-        if (!isset($this->path)) {
+        if (isset($context['routepath'])) {
+            $rule = $context['routepath'][0];
+        } else if (!isset($this->path)) {
             $className = basename(str_replace('\\', '/', $context['class']));
             $className = lcfirst($className);
             $methodName = lcfirst($context['method']);
             $rule = $className . '/' . $methodName;
         } else {
             $rule = $this->path;
+        }
+        if (isset($context['routeprefix'])) {
+            $rule = $context['routeprefix'][0] . '/' . ltrim($rule, '/');
         }
         $rule = '/' . ltrim($rule, '/');
         // 请求方式
@@ -68,7 +73,7 @@ class Route implements AnnotationInterface
         // 域名列表
         $context['domains'] = isset($context['domain']) ? $context['domain'][0] : ['*'];
         // 中间件列表
-        $context['middlewares'] = isset($context['middleware']) ? $context['middleware'][0] : [];
+        $context['middlewares'] = empty($context['middleware']) ? [] : $context['middleware'][0];
 
         // 添加路由
         return $this->app->addRoute(
