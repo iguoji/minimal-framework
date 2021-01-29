@@ -64,6 +64,7 @@ class OnRequest implements ListenerInterface
                 // 匹配路由
                 $route = $this->app->getRoute($path, $host);
                 if (is_null($route)) {
+                    var_dump([$path, $host]);
                     throw new RuntimeException('api not found');
                 }
                 if (!in_array(strtoupper($req->server['request_method']), $route['methods'])) {

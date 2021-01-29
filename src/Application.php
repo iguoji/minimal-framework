@@ -45,7 +45,7 @@ class Application
             echo 'Messgae::' . $th->getMessage() . PHP_EOL;
             echo 'File::' . $th->getFile() . PHP_EOL;
             echo 'Line::' . $th->getLine() . PHP_EOL;
-            print_r($th->getTrace());
+            // print_r($th->getTrace());
             echo PHP_EOL;
         });
         // 容器对象
@@ -188,7 +188,12 @@ class Application
      */
     public function __call(string $method, array $arguments)
     {
-        $eventName = 'Application:On' . ucfirst($method);
+        if (false !== strpos($method, ':')) {
+            $method = implode('', array_map(fn($s) => ucfirst($s), explode(':', $method)));
+        } else {
+            $method = ucfirst($s);
+        }
+        $eventName = 'Application:On' . $method;
         if (isset($this->events[$eventName])) {
             $this->trigger($eventName, ...$arguments);
         } else {
