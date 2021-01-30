@@ -128,7 +128,7 @@ class OnDatabase implements ListenerInterface
                     'fields'    =>  [],
                 ];
                 foreach ($fields as $field) {
-                    $structs[$tableName]['fields'] = [
+                    $structs[$tableName]['fields'][$field['Field']] = [
                         'name'      =>  $field['Field'],
                         'type'      =>  $this->type($field['Type']),
                         'nullable'  =>  $field['Null'] === 'YES',

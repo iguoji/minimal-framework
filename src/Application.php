@@ -191,7 +191,7 @@ class Application
         if (false !== strpos($method, ':')) {
             $method = implode('', array_map(fn($s) => ucfirst($s), explode(':', $method)));
         } else {
-            $method = ucfirst($s);
+            $method = ucfirst($method);
         }
         $eventName = 'Application:On' . $method;
         if (isset($this->events[$eventName])) {
