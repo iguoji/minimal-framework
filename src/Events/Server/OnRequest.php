@@ -82,10 +82,15 @@ class OnRequest implements ListenerInterface
                 [$controller, $action] = $route['callable'];
                 // 验证器 - 前置检查
                 if (isset($route['validate']) && method_exists($route['validate'], $action)) {
-                    $req->params = $route['validate']->check(
-                        $route['validate']->$action(),
-                        array_merge($req->get ?? [], $req->post ?? [])
-                    );
+                    $rules = $route['validate']->$action();
+                    if (is_array($rules)) {
+                        $req->params = $route['validate']->check(
+                            $rules,
+                            array_merge($req->get ?? [], $req->post ?? [])
+                        );
+                    } else {
+                        $req->params = $rules->check(array_merge($req->get ?? [], $req->post ?? []));
+                    }
                 }
                 // 调用控制器
                 $result = $controller->$action($req, $res);
@@ -114,6 +119,7 @@ class OnRequest implements ListenerInterface
                 echo 'Message::' . $th->getMessage() . PHP_EOL;
                 echo 'File::' . $th->getFile() . PHP_EOL;
                 echo 'Line::' . $th->getLine() . PHP_EOL;
+                // print_r($th->getTrace());
                 // 触发事件
                 $this->app->trigger('Server:OnRequestAfter', [$req, $res, [], $th]);
                 // 记录日志

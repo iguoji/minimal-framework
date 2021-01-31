@@ -31,9 +31,6 @@ class OnDatabase implements ListenerInterface
     /**
      * 获取连接
      */
-    /**
-     * 创建连接
-     */
     public function connect(array $config, bool $reconnect = true) : PDO
     {
         try {
