@@ -136,8 +136,8 @@ class OnDatabase implements ListenerInterface
             }
 
             // 合并老的结构
-            $oldConfig = $this->container->config->get(basename($file, '.php'), []);
-            $structs = array_merge($structs, is_array($oldConfig) ? $oldConfig : []);
+            // $oldConfig = $this->container->config->get(basename($file, '.php'), []);
+            // $structs = array_merge($structs, is_array($oldConfig) ? $oldConfig : []);
 
             // 保存结构
             $export = var_export($structs, true);
