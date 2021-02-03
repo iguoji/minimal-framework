@@ -54,12 +54,12 @@ class Route implements AnnotationInterface
         $methodName = lcfirst($context['method']);
 
         // 路径规则
-        if (isset($context['routeprefix'])) {
-            // 指定了前缀，只需补充方法名
-            $rule = $context['routeprefix'][0] . '/' . ltrim($methodName, '/');
-        } else if (isset($context['routepath'])) {
+        if (isset($context['routepath'])) {
             // 指定了完整路径
             $rule = $context['routepath'][0];
+        } else if (isset($context['routeprefix'])) {
+            // 指定了前缀，只需补充方法名
+            $rule = $context['routeprefix'][0] . '/' . ltrim($methodName, '/');
         } else {
             // 其他情况下用类名 + 方法名
             $rule = $this->path ?? $className . '/' . $methodName;

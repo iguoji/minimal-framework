@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Minimal\Events\Server;
 
+use Swoole\Coroutine;
 use Minimal\Config;
 use Minimal\Container\Container;
 use Minimal\Cache\Manager as Cache;
@@ -42,15 +43,18 @@ class OnWorkerStart implements ListenerInterface
         // 输出信息
         // $this->log->notice('worker #' . $workerId . ' started');
 
-        // 数据库对象
-        $configs = $this->config->get('db', []);
-        $configs['worker_num'] = $server->setting['worker_num'];
-        $this->container->set('db', new Database($configs));
+        // 协程环境：表示为HttpServer启动
+        if (Coroutine::getCid() != -1) {
+            // 数据库对象
+            $configs = $this->config->get('db', []);
+            $configs['worker_num'] = $server->setting['worker_num'];
+            $this->container->set('db', new Database($configs));
 
-        // 缓存对象
-        $configs = $this->config->get('cache', []);
-        $configs['worker_num'] = $server->setting['worker_num'];
-        $this->container->set('cache', new Cache($configs));
+            // 缓存对象
+            $configs = $this->config->get('cache', []);
+            $configs['worker_num'] = $server->setting['worker_num'];
+            $this->container->set('cache', new Cache($configs));
+        }
 
         // 调整标题
         cli_set_process_title(sprintf('php swoole http server worker #%s', $workerId));

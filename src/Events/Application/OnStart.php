@@ -71,7 +71,7 @@ class OnStart implements ListenerInterface
             'worker_num'    =>  swoole_cpu_num(),
             'reload_async'  =>  true,
             'max_wait_time' =>  60,
-        ], $this->container->config->get('server.setting', []), $arguments));
+        ], $this->container->config->get('server.settings', []), $arguments));
         // 循环事件
         foreach($this->events as $swooleEvent => $minimalEvent) {
             // 注册事件
