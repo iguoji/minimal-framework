@@ -5,6 +5,7 @@ namespace Minimal\Events\Application;
 
 use Swoole\Http\Server;
 use Minimal\Application;
+use Minimal\Config;
 use Minimal\Container\Container;
 use Minimal\Annotations\Listener;
 use Minimal\Contracts\Listener as ListenerInterface;
@@ -45,7 +46,7 @@ class OnStart implements ListenerInterface
     /**
      * 构造函数
      */
-    public function __construct(protected Application $app, protected Container $container)
+    public function __construct(protected Application $app, protected Config $config)
     {}
 
     /**
@@ -63,21 +64,25 @@ class OnStart implements ListenerInterface
     {
         // 服务实例
         $server = new Server(
-            $this->container->config->get('server.ip', '0.0.0.0'),
-            $this->container->config->get('server.port', 9501),
+            $this->config->get('server.ip', '0.0.0.0'),
+            $this->config->get('server.port', 9501),
         );
         // 配置选项
         $server->set(array_merge([
             'worker_num'    =>  swoole_cpu_num(),
             'reload_async'  =>  true,
             'max_wait_time' =>  60,
-        ], $this->container->config->get('server.settings', []), $arguments));
-        // 循环事件
+        ], $this->config->get('server.settings', []), $arguments));
+        // 循环注册事件
         foreach($this->events as $swooleEvent => $minimalEvent) {
-            // 注册事件
+            // 注册Swoole事件
             $server->on($swooleEvent, function(...$arguments) use($minimalEvent) {
-                // 触发事件
+
+                // Swoole回调来了，立即触发Minimal事件
+                // $arguments = Swoole事件的参数列表数组
+                // 但无法...解包传递过去，因为事件对象实现了接口，参数必须统一，但每个回调参数却又不一样
                 $this->app->trigger($minimalEvent, $arguments);
+
             });
         };
         // 启动服务

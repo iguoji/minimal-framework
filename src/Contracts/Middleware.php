@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Minimal\Contracts;
 
+use Closure;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
@@ -14,5 +15,5 @@ interface Middleware
     /**
      * 处理程序
      */
-    public function handle(Request $req, Response $res, callable $next);
+    public function handle(Request $req, Closure $next) : mixed;
 }

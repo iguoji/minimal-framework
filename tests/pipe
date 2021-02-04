@@ -1,0 +1,137 @@
+<?php
+declare(strict_types=1);
+
+/*
+function one()
+{
+    return 1;
+}
+function two()
+{
+    return 2;
+}
+function three()
+{
+    return 3;
+}
+function four()
+{
+    return 4;
+}
+function five()
+{
+    return 5;
+}
+*/
+
+
+/*
+function one()
+{
+    echo 'Init: ' . __METHOD__, PHP_EOL;
+    $res = two();
+    echo 'Back: ' . __METHOD__, PHP_EOL;
+    return 1;
+}
+function two()
+{
+    echo 'Init: ' . __METHOD__, PHP_EOL;
+    $res = three();
+    echo 'Back: ' . __METHOD__, PHP_EOL;
+    return 2;
+}
+function three()
+{
+    echo 'Init: ' . __METHOD__, PHP_EOL;
+    $res = four();
+    echo 'Back: ' . __METHOD__, PHP_EOL;
+    return 3;
+}
+function four()
+{
+    echo 'Init: ' . __METHOD__, PHP_EOL;
+    $res = five();
+    echo 'Back: ' . __METHOD__, PHP_EOL;
+    return 4;
+}
+function five()
+{
+    echo 'Init: ' . __METHOD__, PHP_EOL;
+    echo 'Back: ' . __METHOD__, PHP_EOL;
+    return 5;
+}
+echo one();
+*/
+
+
+
+/*
+// 1. 路由
+function route($req)
+{
+    echo 'Init: ' . __METHOD__, PHP_EOL;
+    if ($req['path'] == '/favicon.ico') {
+        return false;
+    }
+    $res = middleware($req);
+    echo 'Back: ' . __METHOD__, PHP_EOL;
+    return $res;
+}
+// 2. 中间件
+function middleware($req)
+{
+    echo 'Init: ' . __METHOD__, PHP_EOL;
+    $res = validate($req);
+    echo 'Back: ' . __METHOD__, PHP_EOL;
+    return $res;
+}
+// 3. 验证器
+function validate($req)
+{
+    echo 'Init: ' . __METHOD__, PHP_EOL;
+    $res = controller($req);
+    echo 'Back: ' . __METHOD__, PHP_EOL;
+    return $res;
+}
+// 4. 控制器
+function controller($req)
+{
+    echo 'Init: ' . __METHOD__, PHP_EOL;
+    echo 'Back: ' . __METHOD__, PHP_EOL;
+    return [__METHOD__ . '.res'];
+}
+var_dump(
+    route(['path' => '/index.html'])
+);
+*/
+
+
+
+class Pipe
+{
+    protected array $bindings = [];
+    public function __call(string $method, array $arguments) : static
+    {
+        $this->bindings[] = [$method, $arguments];
+        return $this;
+    }
+}
+
+
+// new Validate($req, $next) : Response
+    // $req->params = []
+// new Middleware($req, $next) : Response
+    //
+// new Controller($req, $res) : array
+
+
+var_dump([
+    'a'     =>  1,
+    'b'     =>  2,
+    'c'     =>  3,
+] + [
+    'a'     =>  4,
+    'b'     =>  5,
+    'c'     =>  6,
+    'd'     =>  7,
+]);

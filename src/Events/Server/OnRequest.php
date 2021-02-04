@@ -42,70 +42,49 @@ class OnRequest implements ListenerInterface
         // 响应对象
         $res = $arguments[1];
 
+        // 前置事件
+        $bool = $this->app->trigger('Application:OnRequestBefore', $arguments);
+        if (false === $bool) {
+            return true;
+        }
+
         // 处理请求
         Coroutine::create(function() use($req, $res){
-            // 控制输出
-            // ob_start();
             try {
-                // 触发事件
-                $this->app->trigger('Server:OnRequestBefore', [$req, $res]);
-                if (!$res->isWritable()) {
-                    return true;
-                }
-                // 域名主机
-                $host = $req->header['host'];
-                // 请求地址
-                $path = $req->server['request_uri'] ?? $req->server['path_info'];
-                // favicon
-                if ($path == '/favicon.ico') {
-                    $res->end();
-                    return;
-                }
+
                 // 匹配路由
-                $route = $this->app->getRoute($path, $host);
+                $route = $this->app->getRoute(
+                    $req->server['request_uri'] ?? $req->server['path_info'],
+                    $req->header['host']
+                );
                 if (is_null($route)) {
-                    var_dump([$path, $host]);
-                    throw new RuntimeException('api not found');
+                    throw new RuntimeException('api not found', 404);
                 }
                 if (!in_array(strtoupper($req->server['request_method']), $route['methods'])) {
                     throw new RuntimeException('method not allowed');
                 }
-                // 中间件
-                $next = fn() => $res;
-                $callback = array_reduce(array_reverse($route['middlewares']), function($next, $class) use ($req, $res){
-                    return function() use($req, $res, $next, $class){
-                        return (new $class)->handle($req, $res, $next);
-                    };
-                }, $next);
-                $callback();
+
                 // 回调拆分
                 [$controller, $action] = $route['callable'];
-                // 验证器 - 前置检查
+
+                // 参数验证
                 if (isset($route['validate']) && method_exists($route['validate'], $action)) {
-                    $rules = $route['validate']->$action();
-                    if (is_array($rules)) {
-                        $req->params = $route['validate']->check(
-                            $rules,
-                            array_merge($req->get ?? [], $req->post ?? [])
-                        );
-                    } else {
-                        $req->params = $rules->check(array_merge($req->get ?? [], $req->post ?? []));
-                    }
-                }
-                // 调用控制器
-                $result = $controller->$action($req, $res);
-                if (!$res->isWritable()) {
-                    return true;
+                    $complex = $route['validate']->$action();
+                    $req->params = $complex->check(array_merge(
+                        $req->get ?? [], $req->post ?? []
+                    ));
                 }
 
-                // 触发事件
-                $this->app->trigger('Server:OnRequestAfter', [$req, $res, $result]);
-                if (!$res->isWritable()) {
-                    return true;
-                }
+                // 中间件 + 用户操作
+                $callback = array_reduce(array_reverse($route['middlewares']), function($next, $class) use($req, $res){
+                    return function() use($class, $req, $next) {
+                        return (new $class)->handle($req, $next);
+                    };
+                }, fn() => $controller->$action($req, $res));
+                $result = $callback();
 
                 // 输出结果
-                if (!is_null($result)) {
+                if ($res->isWritable()) {
                     $res->status(200);
                     $res->header('Content-Type', 'application/json;charset=utf-8');
                     $res->end(json_encode([
@@ -115,20 +94,6 @@ class OnRequest implements ListenerInterface
                     ]));
                 }
             } catch (Throwable $th) {
-                echo 'Exception::' . __CLASS__ . PHP_EOL;
-                echo 'Message::' . $th->getMessage() . PHP_EOL;
-                echo 'File::' . $th->getFile() . PHP_EOL;
-                echo 'Line::' . $th->getLine() . PHP_EOL;
-                // print_r($th->getTrace());
-                // 触发事件
-                $this->app->trigger('Server:OnRequestAfter', [$req, $res, [], $th]);
-                // 记录日志
-                $logContext = ['exception' => $th];
-                if (method_exists($th, 'getData')) {
-                    $logContext = array_merge($logContext, $th->getData());
-                }
-                // $this->log->error($th->getMessage(), $logContext);
-                // 打印错误
                 $res->status(200);
                 $res->header('Content-Type', 'application/json;charset=utf-8');
                 $res->end(json_encode([
@@ -137,11 +102,17 @@ class OnRequest implements ListenerInterface
                     'file'      =>  $th->getFile(),
                     'line'      =>  $th->getLine(),
                     'data'      =>  method_exists($th, 'getData') ? $th->getData() : [],
+                    'trace'     =>  $th->getTrace(),
                 ]));
             }
-            // 刷新输出
-            // ob_end_flush();
         });
+
+        // 后置事件
+        $bool = $this->app->trigger('Application:OnRequestAfter', $arguments);
+        if (false === $bool) {
+            return true;
+        }
+
         // 继续执行
         return true;
     }

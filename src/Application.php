@@ -120,19 +120,19 @@ class Application
     /**
      * 监听事件
      */
-    public function on(string $eventName, callable $callback, int $priority = 0) : void
+    public function on(string $name, callable $callback, int $priority = 0) : void
     {
-        if (!isset($this->events[$eventName])) {
-            $this->events[$eventName] = [];
+        if (!isset($this->events[$name])) {
+            $this->events[$name] = [];
         }
-        $index = count($this->events[$eventName]);
-        foreach ($this->events[$eventName] as $key => $array) {
+        $index = count($this->events[$name]);
+        foreach ($this->events[$name] as $key => $array) {
             if ($priority > $array['priority']) {
                 $index = $key;
                 break;
             }
         }
-        array_splice($this->events[$eventName], $index, 0, [[
+        array_splice($this->events[$name], $index, 0, [[
             'callable'  =>  $callback,
             'priority'  =>  $priority,
         ]]);
@@ -141,15 +141,16 @@ class Application
     /**
      * 触发事件
      */
-    public function trigger(string $eventName, ...$arguments) : void
+    public function trigger(string $name, ...$arguments) : bool
     {
-        foreach ($this->events[$eventName] ?? [] as $key => $array) {
-            $result = $this->container->call($array['callable'], $eventName, ...$arguments);
-            if ($result === false) {
-                echo $eventName, PHP_EOL;
-                break;
+        $events = $this->events[$name] ?? [];
+        foreach ($events as $key => $array) {
+            $bool = $this->container->call($array['callable'], $name, ...$arguments);
+            if (false === $bool) {
+                return false;
             }
         }
+        return true;
     }
 
     /**
@@ -157,12 +158,14 @@ class Application
      */
     public function execute(array $argv = []) : void
     {
+        // 脚本命令
         $argv = $argv ?: $_SERVER['argv'];
         $script = array_shift($argv);
         $command = array_shift($argv);
         if (is_null($command)) {
             die(sprintf('Tips: php %s start [-key value]' . PHP_EOL, $script));
         }
+        // 获取参数
         $arguments = [];
         $lastKey = null;
         foreach ($argv as $v) {
@@ -179,6 +182,7 @@ class Application
         if (!is_null($lastKey)) {
             $arguments[$lastKey] = null;
         }
+        // 转向事件
         $this->__call($command, [$arguments]);
     }
 
