@@ -3,11 +3,7 @@ declare(strict_types=1);
 
 namespace Minimal\Events\Server;
 
-use Swoole\Coroutine;
-use Minimal\Config;
-use Minimal\Container\Container;
-use Minimal\Cache\Manager as Cache;
-use Minimal\Database\Manager as Database;
+use Minimal\Application;
 use Minimal\Annotations\Listener;
 use Minimal\Contracts\Listener as ListenerInterface;
 
@@ -20,7 +16,7 @@ class OnWorkerStart implements ListenerInterface
     /**
      * 构造函数
      */
-    public function __construct(protected Container $container, protected Config $config)
+    public function __construct(protected Application $app)
     {}
 
     /**
@@ -43,21 +39,19 @@ class OnWorkerStart implements ListenerInterface
         // 输出信息
         // $this->log->notice('worker #' . $workerId . ' started');
 
-        // 协程环境：表示为HttpServer启动
-        if (Coroutine::getCid() != -1) {
-            // 数据库对象
-            $configs = $this->config->get('db', []);
-            $configs['worker_num'] = $server->setting['worker_num'];
-            $this->container->set('db', new Database($configs));
-
-            // 缓存对象
-            $configs = $this->config->get('cache', []);
-            $configs['worker_num'] = $server->setting['worker_num'];
-            $this->container->set('cache', new Cache($configs));
+        echo PHP_EOL;
+        echo __METHOD__, PHP_EOL;
+        var_dump(count($arguments));
+        foreach ($arguments as $arg) {
+            echo gettype($arg), PHP_EOL;
         }
+        echo PHP_EOL;
+
+        // 触发事件
+        $this->app->trigger('Application:OnLaunch', $arguments);
 
         // 调整标题
-        cli_set_process_title(sprintf('php swoole http server worker #%s', $workerId));
+        cli_set_process_title(sprintf('php swoole %s worker #%s', $server->taskworker ? 'task' : 'normal', $workerId));
         // 继续执行
         return true;
     }

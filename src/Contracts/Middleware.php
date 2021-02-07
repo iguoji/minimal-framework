@@ -8,7 +8,7 @@ use Swoole\Http\Request;
 use Swoole\Http\Response;
 
 /**
- * Http中间件类
+ * 中间件接口
  */
 interface Middleware
 {

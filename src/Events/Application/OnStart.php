@@ -4,14 +4,15 @@ declare(strict_types=1);
 namespace Minimal\Events\Application;
 
 use Swoole\Http\Server;
-use Minimal\Application;
 use Minimal\Config;
+use Minimal\Application;
 use Minimal\Container\Container;
 use Minimal\Annotations\Listener;
 use Minimal\Contracts\Listener as ListenerInterface;
 
 /**
  * 应用程序 - 启动事件
+ * 主进程
  */
 #[Listener]
 class OnStart implements ListenerInterface
@@ -46,7 +47,7 @@ class OnStart implements ListenerInterface
     /**
      * 构造函数
      */
-    public function __construct(protected Application $app, protected Config $config)
+    public function __construct(protected Container $container, protected Application $app, protected Config $config)
     {}
 
     /**
@@ -62,17 +63,42 @@ class OnStart implements ListenerInterface
      */
     public function handle(string $event, array $arguments = []) : bool
     {
+        // 获取配置
+        $config = $this->config->get('server');
+
         // 服务实例
         $server = new Server(
-            $this->config->get('server.ip', '0.0.0.0'),
-            $this->config->get('server.port', 9501),
+            $config['ip'] ?? '0.0.0.0',
+            $config['port'] ?? 9501,
         );
+
+        // 基础目录
+        $context = $arguments['context'];
+        unset($arguments['context']);
+        $basePath = $context['basePath'] . DIRECTORY_SEPARATOR;
+        $logPath = $basePath . 'logs' . DIRECTORY_SEPARATOR ;
+
+        // 日志文件
+        // 在服务器程序运行期间日志文件被 mv 移动或 unlink 删除后，
+        // 日志信息将无法正常写入，
+        // 这时可以向 Server 发送 SIGRTMIN 信号实现重新打开日志文件。
+        if (!is_dir($logPath) && !mkdir($logPath)) {
+            echo '很抱歉、无法创建日志文件夹！', PHP_EOL;
+            return false;
+        }
+
         // 配置选项
         $server->set(array_merge([
             'worker_num'    =>  swoole_cpu_num(),
             'reload_async'  =>  true,
             'max_wait_time' =>  60,
-        ], $this->config->get('server.settings', []), $arguments));
+            'daemonize'     =>  true,
+            'log_file'      =>  $logPath . 'swoole.log',
+            'log_rotation'  =>  SWOOLE_LOG_ROTATION_DAILY,
+            'pid_file'      =>  $basePath . 'pid',
+            'task_enable_coroutine' =>  true,
+        ], $config['settings'] ?? [], $arguments));
+
         // 循环注册事件
         foreach($this->events as $swooleEvent => $minimalEvent) {
             // 注册Swoole事件
@@ -85,7 +111,30 @@ class OnStart implements ListenerInterface
 
             });
         };
+
+        // 成功提示
+        echo sprintf(
+            'Server running on %s:%s at %s，Process id: %s',
+            $config['ip'] ?? '0.0.0.0',
+            $config['port'] ?? 9501,
+            date('Y-m-d H:i:s'),
+            file_get_contents($basePath . 'pid')
+        ), PHP_EOL;
+
+        // 保存服务
+        $this->container->set(Server::class, $server);
+        $this->container->setAlias('server', Server::class);
+
+        // 触发事件
+        $this->app->trigger('Application:OnStarted');
+
         // 启动服务
-        return $server->start();
+        $bool = $server->start();
+        if (!$bool) {
+            echo '很抱歉、服务器启动失败！', PHP_EOL;
+        }
+
+        // 返回结果
+        return $bool;
     }
 }

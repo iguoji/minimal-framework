@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Minimal\Contracts;
 
 /**
- * 事件监听类
+ * 事件监听接口
  */
 interface Listener
 {

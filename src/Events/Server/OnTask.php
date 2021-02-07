@@ -26,6 +26,23 @@ class OnTask implements ListenerInterface
      */
     public function handle(string $event, array $arguments = []) : bool
     {
+        // 服务对象
+        $server = $arguments[0];
+
+        // 任务对象
+        $task = $arguments[1];
+        /**
+         *
+         * Swoole\Server\Task Object
+         *   (
+         *       [data] => OnGameNext
+         *       [dispatch_time] => 1612700724.3543
+         *       [id] => 4
+         *       [worker_id] => 0
+         *       [flags] => 132
+         *   )
+         */
+
         // 继续执行
         return true;
     }

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Minimal\Events\Application;
+namespace Minimal\Events;
 
 use Minimal\Application;
 use Minimal\Annotations\Listener;

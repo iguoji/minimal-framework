@@ -5,6 +5,7 @@ namespace Minimal;
 
 use ErrorException;
 use RuntimeException;
+use Swoole\Coroutine;
 use Minimal\Facades\Facade;
 use Minimal\Container\Container;
 use Minimal\Annotation\Annotation;
@@ -144,6 +145,31 @@ class Application
     public function trigger(string $name, ...$arguments) : bool
     {
         $events = $this->events[$name] ?? [];
+        echo $name , PHP_EOL;
+        echo count($arguments), PHP_EOL;
+        if (
+            // 没有任何参数
+            (0 === count($arguments))
+            // 第一个为NULL
+            || (is_null($arguments[0]) && count($arguments) > 1)
+            // 第一个为空数组参数
+            || (isset($arguments[0]) && is_array($arguments[0]) && 0 === count($arguments[0]))
+        ) {
+            $arguments[0] = [
+                'context'   =>  [
+                    'basePath'  =>  $this->basePath,
+                ],
+            ];
+        } else {
+            array_push($arguments, [
+                'context'   =>  [
+                    'basePath'  =>  $this->basePath,
+                ],
+            ]);
+        }
+        echo count($arguments), PHP_EOL;
+        echo implode(',', array_keys($arguments)), PHP_EOL;
+        echo PHP_EOL;
         foreach ($events as $key => $array) {
             $bool = $this->container->call($array['callable'], $name, ...$arguments);
             if (false === $bool) {
@@ -192,16 +218,36 @@ class Application
      */
     public function __call(string $method, array $arguments)
     {
-        if (false !== strpos($method, ':')) {
-            $method = implode('', array_map(fn($s) => ucfirst($s), explode(':', $method)));
+        // 拆解命令
+        [$prefix, $method] = false !== strpos($method, ':')
+            ? explode(':', $method, 2)
+            : ['Application', $method];
+        // 事件正名
+        $prefix = ucfirst($prefix);
+        $method = ucfirst($method);
+        $event = $prefix . ':On' . $method;
+        // 执行启动
+        if (!in_array($prefix, ['Application', 'Server'])) {
+            // 协程环境
+            Coroutine\run(function() use($event, $arguments){
+                // 启动应用
+                if (!$this->trigger('Application:OnLaunch')) {
+                    throw new RuntimeException(sprintf('Application launch fail！'));
+                }
+                // 按情况处理
+                if (isset($this->events[$event])) {
+                    $this->trigger($event, ...$arguments);
+                } else {
+                    throw new RuntimeException(sprintf('trigger undefined event %s', $event));
+                }
+            });
         } else {
-            $method = ucfirst($method);
-        }
-        $eventName = 'Application:On' . $method;
-        if (isset($this->events[$eventName])) {
-            $this->trigger($eventName, ...$arguments);
-        } else {
-            throw new RuntimeException(sprintf('call to undefined method Minimal\Application::%s()', $method));
+            // 按情况处理
+            if (isset($this->events[$event])) {
+                $this->trigger($event, ...$arguments);
+            } else {
+                throw new RuntimeException(sprintf('trigger undefined event %s', $event));
+            }
         }
     }
 }
