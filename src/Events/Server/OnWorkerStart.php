@@ -39,17 +39,6 @@ class OnWorkerStart implements ListenerInterface
         // 输出信息
         // $this->log->notice('worker #' . $workerId . ' started');
 
-        echo PHP_EOL;
-        echo __METHOD__, PHP_EOL;
-        var_dump(count($arguments));
-        foreach ($arguments as $arg) {
-            echo gettype($arg), PHP_EOL;
-        }
-        echo PHP_EOL;
-
-        // 触发事件
-        $this->app->trigger('Application:OnLaunch', $arguments);
-
         // 调整标题
         cli_set_process_title(sprintf('php swoole %s worker #%s', $server->taskworker ? 'task' : 'normal', $workerId));
         // 继续执行

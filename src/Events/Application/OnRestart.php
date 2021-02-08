@@ -34,12 +34,18 @@ class OnRestart implements ListenerInterface
      */
     public function handle(string $event, array $arguments = []) : bool
     {
-        // 先停止服务
-        $this->app->trigger('Application:OnStop');
-        // 再启动服务
+        // 基础目录
+        $basePath = $this->app->getContext()['basePath'] . DIRECTORY_SEPARATOR;
+
+        // 运行状态
+        $pid = OnStatus::running($basePath);
+        if (false !== $pid) {
+            // 停止服务
+            $this->app->trigger('Application:OnStop');
+        }
+        // 启动服务
         $this->app->trigger('Application:OnStart');
-        // 查看状态
-        $this->app->trigger('Application:OnStatus');
+
         // 返回结果
         return true;
     }

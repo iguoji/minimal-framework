@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Minimal\Events\Application;
 
 use Swoole\Process;
+use Minimal\Application;
 use Minimal\Annotations\Listener;
 use Minimal\Contracts\Listener as ListenerInterface;
 
@@ -17,7 +18,7 @@ class OnStop implements ListenerInterface
     /**
      * 构造函数
      */
-    public function __construct()
+    public function __construct(protected Application $app)
     {}
 
     /**
@@ -37,32 +38,29 @@ class OnStop implements ListenerInterface
         $force = isset($arguments['force']);
 
         // 基础目录
-        $basePath = $arguments['context']['basePath'] . DIRECTORY_SEPARATOR;
+        $basePath = $this->app->getContext()['basePath'] . DIRECTORY_SEPARATOR;
 
-        // PidFile
-        $file = $basePath . 'pid';
-        // 没有文件
-        if (!is_file($file)) {
-            echo '很抱歉、服务器尚未运行！', PHP_EOL;
-            return false;
-        }
-        // 读取文件
-        $pid = file_get_contents($file);
-        $pid = $pid ? (int) $pid: 0;
-
-        // 没有启动
-        if (!Process::kill($pid, 0)) {
-            echo '很抱歉、服务器尚未启动！', PHP_EOL;
-            return false;
+        // 运行状态
+        $pid = OnStatus::running($basePath);
+        if (false === $pid) {
+            echo 'Server is not running', PHP_EOL;
+            return true;
         }
 
         // 进程存在
+        echo 'Stop';
+        $count = 0;
         while($exist = Process::kill($pid, 0)) {
             // 停止服务
-            $force ? Process::kill($pid, SIGKILL) : Process::kill($pid);
+            $count >= 20 || $force ? Process::kill($pid, SIGKILL) : Process::kill($pid);
+            // 次数增加
+            $count++;
             // 休息片刻
-            usleep(1000);
+            usleep(500000);
+            // 输出进度
+            echo '.';
         }
+        echo ' success', PHP_EOL;
 
         // 返回结果
         return true;

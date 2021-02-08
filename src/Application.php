@@ -40,13 +40,11 @@ class Application
             throw new ErrorException($message, 0, $errno, $file, $line);
         });
         // 捕获异常
-        // set_exception_handler(fn($ex) => $this->container->log->error($ex->getMessage(), ['exception' => $ex]));
         set_exception_handler(function($th){
             echo '[ ' . date('Y-m-d H:i:s') . ' ] ' . __CLASS__ . PHP_EOL;
             echo 'Messgae::' . $th->getMessage() . PHP_EOL;
             echo 'File::' . $th->getFile() . PHP_EOL;
             echo 'Line::' . $th->getLine() . PHP_EOL;
-            // print_r($th->getTrace());
             echo PHP_EOL;
         });
         // 容器对象
@@ -119,6 +117,16 @@ class Application
     }
 
     /**
+     * 获取上下文
+     */
+    public function getContext() : array
+    {
+        return [
+            'basePath'  =>  $this->basePath,
+        ];
+    }
+
+    /**
      * 监听事件
      */
     public function on(string $name, callable $callback, int $priority = 0) : void
@@ -142,36 +150,11 @@ class Application
     /**
      * 触发事件
      */
-    public function trigger(string $name, ...$arguments) : bool
+    public function trigger(string $name, array $arguments = []) : bool
     {
         $events = $this->events[$name] ?? [];
-        echo $name , PHP_EOL;
-        echo count($arguments), PHP_EOL;
-        if (
-            // 没有任何参数
-            (0 === count($arguments))
-            // 第一个为NULL
-            || (is_null($arguments[0]) && count($arguments) > 1)
-            // 第一个为空数组参数
-            || (isset($arguments[0]) && is_array($arguments[0]) && 0 === count($arguments[0]))
-        ) {
-            $arguments[0] = [
-                'context'   =>  [
-                    'basePath'  =>  $this->basePath,
-                ],
-            ];
-        } else {
-            array_push($arguments, [
-                'context'   =>  [
-                    'basePath'  =>  $this->basePath,
-                ],
-            ]);
-        }
-        echo count($arguments), PHP_EOL;
-        echo implode(',', array_keys($arguments)), PHP_EOL;
-        echo PHP_EOL;
         foreach ($events as $key => $array) {
-            $bool = $this->container->call($array['callable'], $name, ...$arguments);
+            $bool = $this->container->call($array['callable'], $name, $arguments);
             if (false === $bool) {
                 return false;
             }
@@ -209,7 +192,7 @@ class Application
             $arguments[$lastKey] = null;
         }
         // 转向事件
-        $this->__call($command, [$arguments]);
+        $this->__call($command, $arguments);
     }
 
     /**
@@ -230,13 +213,17 @@ class Application
         if (!in_array($prefix, ['Application', 'Server'])) {
             // 协程环境
             Coroutine\run(function() use($event, $arguments){
-                // 启动应用
-                if (!$this->trigger('Application:OnLaunch')) {
-                    throw new RuntimeException(sprintf('Application launch fail！'));
+                // 数据库初始化
+                if (!$this->trigger('Database:OnInit')) {
+                    throw new RuntimeException(sprintf('Database init fail！'));
+                }
+                // 缓存初始化
+                if (!$this->trigger('Cache:OnInit')) {
+                    throw new RuntimeException(sprintf('Cache init fail！'));
                 }
                 // 按情况处理
                 if (isset($this->events[$event])) {
-                    $this->trigger($event, ...$arguments);
+                    $this->trigger($event, $arguments);
                 } else {
                     throw new RuntimeException(sprintf('trigger undefined event %s', $event));
                 }
@@ -244,7 +231,7 @@ class Application
         } else {
             // 按情况处理
             if (isset($this->events[$event])) {
-                $this->trigger($event, ...$arguments);
+                $this->trigger($event, $arguments);
             } else {
                 throw new RuntimeException(sprintf('trigger undefined event %s', $event));
             }

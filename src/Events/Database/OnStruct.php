@@ -5,7 +5,7 @@ namespace Minimal\Events\Database;
 
 use PDO;
 use Swoole\Coroutine;
-use Minimal\Facades\Db;
+use Minimal\Application;
 use Minimal\Container\Container;
 use Minimal\Annotations\Listener;
 use Minimal\Contracts\Listener as ListenerInterface;
@@ -19,7 +19,7 @@ class OnStruct implements ListenerInterface
     /**
      * 构造函数
      */
-    public function __construct(protected Container $container)
+    public function __construct(protected Container $container, protected Application $app)
     {}
 
     /**
@@ -63,9 +63,7 @@ class OnStruct implements ListenerInterface
     public function handle(string $event, array $arguments = []) : bool
     {
         // 基础目录
-        $context = $arguments['context'];
-        unset($arguments['context']);
-        $basePath = $context['basePath'] . DIRECTORY_SEPARATOR;
+        $basePath = $this->app->getContext()['basePath'] . DIRECTORY_SEPARATOR;
 
         // 保存地址
         $file = $arguments['file'] ?? $basePath . 'config' . DIRECTORY_SEPARATOR . 'table.php';
@@ -78,7 +76,7 @@ class OnStruct implements ListenerInterface
         $structs = [];
 
         // 查询所有表
-        $tables = Db::query('SHOW TABLE STATUS');
+        $tables = $this->container->db->query('SHOW TABLE STATUS');
         // 循环所有表
         foreach ($tables as $table) {
             // 表名
@@ -86,7 +84,7 @@ class OnStruct implements ListenerInterface
             // 表备注
             $tableComment = $table['Comment'];
             // 查询所有字段
-            $fields = Db::query("SHOW FULL FIELDS FROM `$tableName`");
+            $fields = $this->container->db->query("SHOW FULL FIELDS FROM `$tableName`");
 
             // 组织数据
             $structs[$tableName] = [

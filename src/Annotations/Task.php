@@ -59,30 +59,24 @@ class Task implements AnnotationInterface
             throw new UnexpectedValueException(sprintf('Task "%s" must implements "%s"', $context['class'], TaskInterface::class));
         }
         // 绑定事件
-        $this->app->on('Application:OnLaunch', function(string $event, array $arguments = []) use($task){
-            echo PHP_EOL;
-            echo __METHOD__, PHP_EOL;
-            var_dump(count($arguments));
-            foreach ($arguments as $arg) {
-                echo gettype($arg), PHP_EOL;
-            }
-            echo PHP_EOL;
-            /*// 协程处理
-            Coroutine\run(function() use($task){
+        $this->app->on('Server:OnWorkerStart', function(string $event, array $arguments) use($task){
+            // 服务对象
+            $server = $arguments[0];
+            // 进程编号
+            $workerId = $arguments[1];
+            // 第一个任务进程
+            if ($workerId == $server->setting['worker_num']) {
                 // 有效任务
                 if ($task->active() && $task->interval() > 0) {
                     // 多次任务
                     Timer::tick($task->interval(), function(int $timer_id) use($task){
-                        // 删除任务
-                        if (!$task->active() && $task->interval() <= 0) {
-                            Timer::clear($timer_id);
-                        } else if ($task->active()) {
-                            // 激活了才执行任务
+                        // 激活了才执行任务
+                        if ($task->active()) {
                             $task->handle();
                         }
                     });
                 }
-            });*/
+            }
         });
         return null;
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Minimal\Events\Application;
 
 use Swoole\Process;
+use Minimal\Application;
 use Minimal\Annotations\Listener;
 use Minimal\Contracts\Listener as ListenerInterface;
 
@@ -17,7 +18,7 @@ class OnReload implements ListenerInterface
     /**
      * 构造函数
      */
-    public function __construct()
+    public function __construct(protected Application $app)
     {}
 
     /**
@@ -34,27 +35,17 @@ class OnReload implements ListenerInterface
     public function handle(string $event, array $arguments = []) : bool
     {
         // 基础目录
-        $basePath = $arguments['context']['basePath'] . DIRECTORY_SEPARATOR;
+        $basePath = $this->app->getContext()['basePath'] . DIRECTORY_SEPARATOR;
 
-        // PidFile
-        $file = $basePath . 'pid';
-        // 没有文件
-        if (!is_file($file)) {
-            echo '很抱歉、服务器尚未运行！', PHP_EOL;
-            return false;
-        }
-        // 读取文件
-        $pid = file_get_contents($file);
-        $pid = $pid ? (int) $pid: 0;
-        // 没有启动
-        if (!Process::kill($pid, 0)) {
-            echo '很抱歉、服务器尚未启动！', PHP_EOL;
-            return false;
+        // 运行状态
+        $pid = OnStatus::running($basePath);
+        if (false === $pid) {
+            echo 'Server is not running', PHP_EOL;
+            return true;
         }
 
         // 重载服务
         $bool = Process::kill($pid, SIGUSR1);
-
         // 返回结果
         return true;
     }

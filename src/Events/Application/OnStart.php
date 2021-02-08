@@ -66,17 +66,25 @@ class OnStart implements ListenerInterface
         // 获取配置
         $config = $this->config->get('server');
 
+        // 基础目录
+        $basePath = $this->app->getContext()['basePath'] . DIRECTORY_SEPARATOR;
+        $logPath = $basePath . 'logs' . DIRECTORY_SEPARATOR ;
+
+        // 运行状态
+        $pid = OnStatus::running($basePath, $config);
+        if (false !== $pid) {
+            return false;
+        }
+
         // 服务实例
         $server = new Server(
             $config['ip'] ?? '0.0.0.0',
             $config['port'] ?? 9501,
         );
 
-        // 基础目录
-        $context = $arguments['context'];
-        unset($arguments['context']);
-        $basePath = $context['basePath'] . DIRECTORY_SEPARATOR;
-        $logPath = $basePath . 'logs' . DIRECTORY_SEPARATOR ;
+        // 保存服务
+        $this->container->set(Server::class, $server);
+        $this->container->setAlias('server', Server::class);
 
         // 日志文件
         // 在服务器程序运行期间日志文件被 mv 移动或 unlink 删除后，
@@ -102,6 +110,7 @@ class OnStart implements ListenerInterface
         // 循环注册事件
         foreach($this->events as $swooleEvent => $minimalEvent) {
             // 注册Swoole事件
+            // ...$arguments = Swoole提供的参数
             $server->on($swooleEvent, function(...$arguments) use($minimalEvent) {
 
                 // Swoole回调来了，立即触发Minimal事件
@@ -118,12 +127,8 @@ class OnStart implements ListenerInterface
             $config['ip'] ?? '0.0.0.0',
             $config['port'] ?? 9501,
             date('Y-m-d H:i:s'),
-            file_get_contents($basePath . 'pid')
+            $server->getMasterPid()
         ), PHP_EOL;
-
-        // 保存服务
-        $this->container->set(Server::class, $server);
-        $this->container->setAlias('server', Server::class);
 
         // 触发事件
         $this->app->trigger('Application:OnStarted');
