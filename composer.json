@@ -4,6 +4,7 @@
     "description": "a minimalism swoole framework",
     "keywords": ["framework", "swoole", "php"],
     "homepage": "https://github.com/iguoji/minimal-framework",
+    "license": "Apache-2.0",
     "require": {
         "php": ">=8.0.0",
         "iguoji/minimal-annotation": "dev-master",

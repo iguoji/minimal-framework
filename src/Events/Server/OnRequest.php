@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Minimal\Events\Server;
 
 use Minimal\Application;
+use Minimal\Container\Container;
 use Minimal\Annotations\Listener;
 use Minimal\Contracts\Listener as ListenerInterface;
 
@@ -16,7 +17,7 @@ class OnRequest implements ListenerInterface
     /**
      * 构造函数
      */
-    public function __construct(protected Application $app)
+    public function __construct(protected Container $container, protected Application $app)
     {}
 
     /**
@@ -32,6 +33,10 @@ class OnRequest implements ListenerInterface
      */
     public function handle(string $event, array $arguments = []) : bool
     {
+        // 保存请求
+        $this->container->set($arguments[0]::class, $arguments[0]);
+        $this->container->setAlias('request', $arguments[0]::class);
+
         // 前置事件
         $bool = $this->app->trigger('Application:OnRequestBefore', $arguments);
         if (false === $bool) {
