@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Minimal\Events;
+namespace Minimal\Listeners;
 
 use Throwable;
 use RuntimeException;
