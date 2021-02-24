@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Minimal\Events\Server;
 
+use Swoole\Timer;
 use Minimal\Annotations\Listener;
 use Minimal\Contracts\Listener as ListenerInterface;
 
@@ -33,6 +34,10 @@ class OnWorkerExit implements ListenerInterface
     {
         // 打印信息
         // $this->log->notice(__CLASS__ . '::' . $event);
+
+        // 清除定时器
+        Timer::clearAll();
+
         // 继续执行
         return true;
     }

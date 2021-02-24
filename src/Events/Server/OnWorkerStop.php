@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Minimal\Events\Server;
 
+use Swoole\Timer;
 use Minimal\Annotations\Listener;
 use Minimal\Contracts\Listener as ListenerInterface;
 
@@ -33,6 +34,12 @@ class OnWorkerStop implements ListenerInterface
     {
         // 打印信息
         // $this->log->notice(__CLASS__ . '::' . $event);
+
+        // 清除定时器
+        // 并不管用，只有在 OnWorkerExit 中才能清除
+        // 但官方又说 Task 进程不会触发 OnWorkerExit 事件
+        Timer::clearAll();
+
         // 继续执行
         return true;
     }
