@@ -33,13 +33,13 @@ class OnStatus implements ListenerInterface
     /**
      * 是否在运行
      */
-    public static function running(string $basePath, array $config = null) : bool|int
+    public static function running(string $runtimePath, array $config = null) : bool|int
     {
         // 最终状态
         $status = false;
 
         // PidFile
-        $file = $basePath . 'pid';
+        $file = $runtimePath . 'pid';
         clearstatcache(true, $file);
         if (is_file($file)) {
             // 读取文件
@@ -76,11 +76,11 @@ class OnStatus implements ListenerInterface
         // 获取配置
         $config = $this->config->get('server');
 
-        // 基础目录
-        $basePath = $this->app->getContext()['basePath'] . DIRECTORY_SEPARATOR;
+        // 运行时目录
+        $runtimePath = $this->app->getContext()['runtimePath'];
 
         // 是否在运行
-        $pid = self::running($basePath, $config);
+        $pid = self::running($runtimePath, $config);
         if (false === $pid) {
             echo 'Server is not running', PHP_EOL;
         }

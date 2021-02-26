@@ -62,11 +62,11 @@ class OnStruct implements ListenerInterface
      */
     public function handle(string $event, array $arguments = []) : bool
     {
-        // 基础目录
-        $basePath = $this->app->getContext()['basePath'] . DIRECTORY_SEPARATOR;
+        // 配置目录
+        $configPath = $this->app->getContext()['configPath'];
 
         // 保存地址
-        $file = $arguments['file'] ?? $basePath . 'config' . DIRECTORY_SEPARATOR . 'table.php';
+        $file = $arguments['file'] ?? $configPath . 'table.php';
         if (empty($file)) {
             echo 'Tips: php minimal database:struct -file /path/to/path/table.php', PHP_EOL;
             return true;

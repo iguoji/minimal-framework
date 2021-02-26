@@ -37,11 +37,11 @@ class OnStop implements ListenerInterface
         // 强行停止
         $force = isset($arguments['force']);
 
-        // 基础目录
-        $basePath = $this->app->getContext()['basePath'] . DIRECTORY_SEPARATOR;
+        // 运行时目录
+        $runtimePath = $this->app->getContext()['runtimePath'];
 
         // 运行状态
-        $pid = OnStatus::running($basePath);
+        $pid = OnStatus::running($runtimePath);
         if (false === $pid) {
             echo 'Server is not running', PHP_EOL;
             return true;

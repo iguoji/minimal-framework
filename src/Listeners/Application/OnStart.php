@@ -67,11 +67,10 @@ class OnStart implements ListenerInterface
         $config = $this->config->get('server');
 
         // 基础目录
-        $basePath = $this->app->getContext()['basePath'] . DIRECTORY_SEPARATOR;
-        $logPath = $basePath . 'logs' . DIRECTORY_SEPARATOR ;
+        $appContext = $this->app->getContext();
 
         // 运行状态
-        $pid = OnStatus::running($basePath, $config);
+        $pid = OnStatus::running($appContext['runtimePath'], $config);
         if (false !== $pid) {
             return false;
         }
@@ -90,7 +89,7 @@ class OnStart implements ListenerInterface
         // 在服务器程序运行期间日志文件被 mv 移动或 unlink 删除后，
         // 日志信息将无法正常写入，
         // 这时可以向 Server 发送 SIGRTMIN 信号实现重新打开日志文件。
-        if (!is_dir($logPath) && !mkdir($logPath)) {
+        if (!is_dir($appContext['logPath']) && !mkdir($appContext['logPath'], 0777, true)) {
             echo '很抱歉、无法创建日志文件夹！', PHP_EOL;
             return false;
         }
@@ -101,9 +100,9 @@ class OnStart implements ListenerInterface
             'reload_async'  =>  true,
             'max_wait_time' =>  60,
             'daemonize'     =>  true,
-            'log_file'      =>  $logPath . 'swoole.log',
+            'log_file'      =>  $appContext['logPath'] . 'app.log',
             'log_rotation'  =>  SWOOLE_LOG_ROTATION_DAILY,
-            'pid_file'      =>  $basePath . 'pid',
+            'pid_file'      =>  $appContext['runtimePath'] . 'pid',
             'task_enable_coroutine' =>  true,
         ], $config['settings'] ?? [], $arguments));
 

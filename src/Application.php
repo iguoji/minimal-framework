@@ -51,14 +51,6 @@ class Application
         $this->container = new Container();
         $this->container->set(Container::class, $this->container);
         $this->container->set(Application::class, $this);
-        // 配置对象
-        $files = glob($basePath . '/config/*.php');
-        $configs = [];
-        foreach ($files as $key => $file) {
-            $configs[pathinfo($file, PATHINFO_FILENAME)] = require $file;
-        }
-        $config = new Config($configs);
-        $this->container->set('config', $config);
         // 注解处理
         $annotation = new Annotation($this->container);
         // 扫描：框架注解
@@ -121,9 +113,13 @@ class Application
      */
     public function getContext() : array
     {
-        return [
-            'basePath'  =>  $this->basePath,
+        $context = [
+            'basePath'      =>  $this->basePath . DIRECTORY_SEPARATOR,
         ];
+        $context['configPath'] = $context['basePath'] . 'config' . DIRECTORY_SEPARATOR;
+        $context['runtimePath'] = $context['basePath'] . 'runtime' . DIRECTORY_SEPARATOR;
+        $context['logPath'] = $context['runtimePath'] . 'logs' . DIRECTORY_SEPARATOR;
+        return $context;
     }
 
     /**

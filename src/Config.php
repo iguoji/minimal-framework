@@ -8,19 +8,23 @@ use Minimal\Support\Arr;
 /**
  * 配置
  */
+#[Inject(alias: 'config')]
 class Config
 {
     /**
      * 数据源
      */
-    private $dataset = [];
+    protected array $dataset = [];
 
     /**
      * 构造函数
      */
-    public function __construct(array $data)
+    public function __construct(Application $app)
     {
-        $this->dataset = $data;
+        $files = glob($app->getContext()['configPath'] . '*.php');
+        foreach ($files as $key => $file) {
+            $this->dataset[pathinfo($file, PATHINFO_FILENAME)] = require $file;
+        }
     }
 
     /**
