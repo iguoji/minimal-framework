@@ -15,6 +15,7 @@ interface Listener
 
     /**
      * 处理程序
+     * 返回false则后续相同事件不在继续处理
      */
     public function handle(string $event, array $arguments = []) : bool;
 }

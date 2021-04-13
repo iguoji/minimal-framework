@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+<ul id="list">
+    <li>在这里看到你的留言</li>
+</ul>
+<p>
+    <textarea id="msg" rows="10" cols="60"></textarea>
+</p>
+<p>
+    <button id="send">发送信息</button>
+</p>
+<script>
+var wsServer = 'ws://192.168.2.12:8080';
+var websocket = new WebSocket(wsServer);
+websocket.onopen = function (evt) {
+    console.log("Connected to WebSocket server.");
+};
+websocket.onclose = function (evt) {
+    console.log("Disconnected");
+};
+websocket.onmessage = function (evt) {
+    console.log('Retrieved data from server: ' + evt.data);
+};
+websocket.onerror = function (evt, e) {
+    console.log('Error occured: ' + evt.data);
+};
+window.onload = function(){
+    document.getElementById('send').addEventListener('click', function(ev){
+        var msg = document.getElementById('msg').value;
+        console.log(websocket.send(msg));
+    });
+}
+</script>
+</body>
+</html>

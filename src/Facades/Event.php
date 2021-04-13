@@ -5,10 +5,10 @@ namespace Minimal\Facades;
 
 use Minimal\Foundation\Facade;
 
-class Request extends Facade
+class Event extends Facade
 {
     public static function getClass() : string
     {
-        return 'request';
+        return 'event';
     }
 }

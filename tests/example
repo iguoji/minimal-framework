@@ -5,33 +5,15 @@
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 
 // 引入对象
-use Monolog\Logger;
-use Monolog\Handler\StreamHandler;
-use Monolog\Formatter\LineFormatter;
+use Minimal\Application;
 
 // 显示错误
 ini_set('display_errors', 'stderr');
 // 报告错误
 error_reporting(E_ALL);
 
+// 应用对象
+$app = new Application(__DIR__);
 
-// 日志对象
-$logger = new Logger('default');
-// 日志格式
-$lineFormatter = new LineFormatter("[%datetime%][%channel%][%level_name%] %message% %context% %extra%\n", dateFormat: 'Y-m-d H:i:s');
-// 处理程序
-$streamHandler = new StreamHandler(__DIR__ . '/my.log');
-$streamHandler->setFormatter($lineFormatter);
-$logger->pushHandler($streamHandler);
-// 输出日志
-for ($i=0; $i < 1000; $i++) {
-    $logger->debug('我是调试 Debug 信息', [1]);
-    $logger->info('我是信息 Info 信息', ['2', false, null, 3.33 * 4.3]);
-    $logger->notice('我是调试 Notice 信息', [1, [2, 3], 's' => ['ss'], 'd' => 3]);
-    $logger->warning('我是警告 Warning 信息', [new StdClass()]);
-    $logger->error('我是错误 Error 信息');
-    $logger->critical('我是警告 Critical 信息');
-    $logger->alert('我是警告 Alert 信息');
-    $logger->emergency('我是警告 Emergency 信息');
-    $logger->debug(str_repeat('-', 50));
-}
+// 执行应用
+$app->execute();

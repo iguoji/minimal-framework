@@ -3,159 +3,69 @@ declare(strict_types=1);
 
 namespace Minimal;
 
-use ErrorException;
-use RuntimeException;
-use Swoole\Coroutine;
-use Minimal\Facades\Facade;
-use Minimal\Container\Container;
-use Minimal\Annotation\Annotation;
+use Minimal\Foundation\Facade;
+use Minimal\Foundation\Service;
+use Minimal\Foundation\Container;
 
 /**
  * 应用类
  */
-class Application
+class Application extends Container
 {
     /**
-     * 容器对象
+     * 版本号码
      */
-    protected Container $container;
+    const VERSION = '1.0.0';
 
     /**
-     * 路由器（含域名和路由列表）
+     * 目录列表
      */
-    protected array $router = [];
+    protected string $basePath;         // 基础目录：  /
+    protected string $appPath;          // 应用目录：  /app/
+    protected string $configPath;       // 配置目录：  /config/
+    protected string $routePath;        // 路由目录：  /config/route/
+    protected string $runtimePath;      // 运行时目录：/runtime/
+    protected string $logPath;          // 日志目录：  /runtime/logs/
+    protected string $cachePath;        // 日志目录：  /runtime/cache/
 
     /**
-     * 事件集合
+     * 别名集合
      */
-    protected array $events = [];
+    protected array $aliases = [
+        'service'   =>  \Minimal\Foundation\Service::class,
+        'event'     =>  \Minimal\Foundation\Event::class,
+        'server'    =>  \Minimal\Foundation\Server::class,
+    ];
+
+    /**
+     * 服务集合
+     */
+    protected array $services = [
+        'error'     =>  \Minimal\Services\ErrorService::class,
+        'env'       =>  \Minimal\Services\EnvService::class,
+        'config'    =>  \Minimal\Services\ConfigService::class,
+        'log'       =>  \Minimal\Services\LoggerService::class,             // https://github.com/Seldaek/monolog
+        'console'   =>  \Minimal\Services\ConsoleService::class,            // https://github.com/symfony/console
+        'event'     =>  \Minimal\Services\EventService::class,
+        'cache'     =>  \Minimal\Services\CacheService::class,
+        'database'  =>  \Minimal\Services\DatabaseService::class,
+        'route'     =>  \Minimal\Services\RouteService::class,              // https://github.com/nikic/FastRoute
+    ];
 
     /**
      * 构造函数
      */
-    public function __construct(protected string $basePath)
+    public function __construct(string $basePath)
     {
-        // 绑定错误
-        set_error_handler(function($errno, $message, $file, $line){
-            throw new ErrorException($message, 0, $errno, $file, $line);
-        });
-        // 捕获异常
-        set_exception_handler(function($th){
-            echo '[ ' . date('Y-m-d H:i:s') . ' ] ' . __CLASS__ . PHP_EOL;
-            echo 'Messgae::' . $th->getMessage() . PHP_EOL;
-            echo 'File::' . $th->getFile() . PHP_EOL;
-            echo 'Line::' . $th->getLine() . PHP_EOL;
-            echo PHP_EOL;
-        });
-        // 容器对象
-        $this->container = new Container();
-        $this->container->set(Container::class, $this->container);
-        $this->container->set(Application::class, $this);
-        // 注解处理
-        $annotation = new Annotation($this->container);
-        // 扫描：框架注解
-        $annotation->scan(__DIR__, [
-            'namespace' =>  __NAMESPACE__
-        ]);
-        // 扫描：应用注解
-        $annotation->scan($basePath);
+        // 基础目录
+        $this->useBasePath($basePath);
+        // 绑定容器
+        $this->set('app', $this);
+        $this->set('container', $this);
+        // 服务绑定
+        $this->set('service', new Service($this, $this->services));
         // 门面注入
-        Facade::setContainer($this->container);
-    }
-
-    /**
-     * 添加路由
-     */
-    public function addRoute(string $path, array $methods = ['POST'], array $context = []) : int
-    {
-        // 全局路由器
-        $this->router['routes'] = $this->router['routes'] ?? [];
-        // 路由对象
-        $route = array_merge($context, [
-            'path'          =>  $path,
-            'methods'       =>  $methods,
-        ]);
-        // 添加路由并得到索引编号
-        $routeId = array_push($this->router['routes'], $route) - 1;
-        // 循环域名，并根据路径保存到域名下
-        foreach ($context['domains'] as $domain) {
-            $this->router['domains'][$domain][$path] = $routeId;
-        }
-        // 返回索引
-        return $routeId;
-    }
-
-    /**
-     * 获取路由
-     */
-    public function getRoute(string $path, string $domain) : ?array
-    {
-        foreach (array_keys($this->router['domains'] ?? []) as $value) {
-            if ($value == '*' || preg_match('/^' . str_replace('*', '[a-zA-Z0-9-]+', $value) . '$/', $domain)) {
-                if (isset($this->router['domains'][$value][$path])) {
-                    return $this->router['routes'][$this->router['domains'][$value][$path]];
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 获取路由器
-     */
-    public function getRouter() : ?array
-    {
-        return $this->router;
-    }
-
-    /**
-     * 获取上下文
-     */
-    public function getContext() : array
-    {
-        $context = [
-            'basePath'      =>  $this->basePath . DIRECTORY_SEPARATOR,
-        ];
-        $context['configPath'] = $context['basePath'] . 'config' . DIRECTORY_SEPARATOR;
-        $context['runtimePath'] = $context['basePath'] . 'runtime' . DIRECTORY_SEPARATOR;
-        $context['logPath'] = $context['runtimePath'] . 'logs' . DIRECTORY_SEPARATOR;
-        return $context;
-    }
-
-    /**
-     * 监听事件
-     */
-    public function on(string $name, callable $callback, int $priority = 0) : void
-    {
-        if (!isset($this->events[$name])) {
-            $this->events[$name] = [];
-        }
-        $index = count($this->events[$name]);
-        foreach ($this->events[$name] as $key => $array) {
-            if ($priority > $array['priority']) {
-                $index = $key;
-                break;
-            }
-        }
-        array_splice($this->events[$name], $index, 0, [[
-            'callable'  =>  $callback,
-            'priority'  =>  $priority,
-        ]]);
-    }
-
-    /**
-     * 触发事件
-     */
-    public function trigger(string $name, array $arguments = []) : bool
-    {
-        $events = $this->events[$name] ?? [];
-        foreach ($events as $key => $array) {
-            $bool = $this->container->call($array['callable'], $name, $arguments);
-            if (false === $bool) {
-                return false;
-            }
-        }
-        return true;
+        Facade::setContainer($this);
     }
 
     /**
@@ -163,74 +73,171 @@ class Application
      */
     public function execute(array $argv = []) : void
     {
-        // 脚本命令
-        $argv = $argv ?: $_SERVER['argv'];
-        $script = array_shift($argv);
-        $command = array_shift($argv);
-        if (is_null($command)) {
-            die(sprintf('Tips: php %s start [-key value]' . PHP_EOL, $script));
-        }
-        // 获取参数
-        $arguments = [];
-        $lastKey = null;
-        foreach ($argv as $v) {
-            if (is_null($lastKey)) {
-                $lastKey = trim($v, '-');
-            } else if (0 === strpos($v, '-')) {
-                $arguments[$lastKey] = null;
-                $lastKey = trim($v, '-');
-            } else {
-                $arguments[$lastKey] = $v;
-                $lastKey = null;
-            }
-        }
-        if (!is_null($lastKey)) {
-            $arguments[$lastKey] = null;
-        }
-        // 转向事件
-        $this->__call($command, $arguments);
+        // 注册服务
+        $this->service->registerServices();
+        // 启动服务
+        $this->service->bootServices();
+
+        // 监听命令
+        $this->console->run();
+    }
+
+
+
+
+    /**
+     * 规范目录
+     */
+    public function folder(string $path = null) : string
+    {
+        return empty($path) ? '' : (str_ends_with($path, DIRECTORY_SEPARATOR) ? $path : $path . DIRECTORY_SEPARATOR);
     }
 
     /**
-     * 未知函数
-     * 转向事件触发
+     * 目录拼接
      */
-    public function __call(string $method, array $arguments)
+    public function paths(string $path, ...$paths) : string
     {
-        // 拆解命令
-        [$prefix, $method] = false !== strpos($method, ':')
-            ? explode(':', $method, 2)
-            : ['Application', $method];
-        // 事件正名
-        $prefix = ucfirst($prefix);
-        $method = ucfirst($method);
-        $event = $prefix . ':On' . $method;
-        // 执行启动
-        if (!in_array($prefix, ['Application', 'Server'])) {
-            // 协程环境
-            Coroutine\run(function() use($event, $arguments){
-                // 数据库初始化
-                if (!$this->trigger('Database:OnInit')) {
-                    throw new RuntimeException(sprintf('Database init fail！'));
-                }
-                // 缓存初始化
-                if (!$this->trigger('Cache:OnInit')) {
-                    throw new RuntimeException(sprintf('Cache init fail！'));
-                }
-                // 按情况处理
-                if (isset($this->events[$event])) {
-                    $this->trigger($event, $arguments);
-                } else {
-                    throw new RuntimeException(sprintf('trigger undefined event %s', $event));
-                }
-            });
-        } else {
-            // 按情况处理
-            if (isset($this->events[$event])) {
-                $this->trigger($event, $arguments);
+        if (!str_ends_with($path, DIRECTORY_SEPARATOR)) {
+            $path .= DIRECTORY_SEPARATOR;
+        }
+        foreach ($paths as $key => $p) {
+            if (is_null($p)) {
+                continue;
+            }
+            if (!str_ends_with($path, DIRECTORY_SEPARATOR)) {
+                $path .= DIRECTORY_SEPARATOR;
+            }
+            if (str_starts_with($p, DIRECTORY_SEPARATOR)) {
+                $path = $p;
             } else {
-                throw new RuntimeException(sprintf('trigger undefined event %s', $event));
+                $path .= $p;
             }
         }
+        return $path;
+    }
+
+    /**
+     * 基础目录
+     */
+    public function basePath(string $path = null) : string
+    {
+        return $this->paths($this->basePath, $path);
+    }
+
+    /**
+     * 更改基础目录
+     */
+    public function useBasePath(string $path) : string
+    {
+        return $this->basePath = $path;
+    }
+
+    /**
+     * 应用目录
+     */
+    public function appPath(string $path = null) : string
+    {
+        return $this->paths($this->basePath(), $this->appPath ?? 'app', $path);
+    }
+
+    /**
+     * 更改应用目录
+     */
+    public function useAppPath(string $path) : static
+    {
+        $this->appPath = $path;
+
+        return $this;
+    }
+
+    /**
+     * 配置目录
+     */
+    public function configPath(string $path = null) : string
+    {
+        return $this->paths($this->basePath(), $this->configPath ?? 'config', $path);
+    }
+
+    /**
+     * 更改配置目录
+     */
+    public function useConfigPath(string $path) : static
+    {
+        $this->configPath = $path;
+
+        return $this;
+    }
+
+    /**
+     * 路由目录
+     */
+    public function routePath(string $path = null) : string
+    {
+        return $this->paths($this->configPath(), $this->routePath ?? 'route', $path);
+    }
+
+    /**
+     * 更改路由目录
+     */
+    public function useRoutePath(string $path) : static
+    {
+        $this->routePath = $path;
+
+        return $this;
+    }
+
+    /**
+     * 运行时目录
+     */
+    public function runtimePath(string $path = null) : string
+    {
+        return $this->paths($this->basePath(), $this->runtimePath ?? 'runtime', $path);
+    }
+
+    /**
+     * 更改运行时目录
+     */
+    public function useRuntimePath(string $path) : static
+    {
+        $this->runtimePath = $path;
+
+        return $this;
+    }
+
+    /**
+     * 日志目录
+     */
+    public function logPath(string $path = null) : string
+    {
+        return $this->paths($this->runtimePath(), $this->logPath ?? 'log', $path);
+    }
+
+    /**
+     * 更改日志目录
+     */
+    public function useLogPath(string $path) : static
+    {
+        return $this->logPath = $path;
+
+        return $this;
+    }
+
+    /**
+     * 缓存目录
+     */
+    public function cachePath(string $path = null) : string
+    {
+        return $this->paths($this->runtimePath(), $this->cachePath ?? 'cache', $path);
+    }
+
+    /**
+     * 更改缓存目录
+     */
+    public function useCachePath(string $path) : static
+    {
+        $this->cachePath = $path;
+
+        return $this;
     }
 }

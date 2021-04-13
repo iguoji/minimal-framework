@@ -1,31 +1,30 @@
 {
     "name": "iguoji/minimal-framework",
     "type": "library",
-    "description": "a minimalism swoole framework",
-    "keywords": ["framework", "swoole", "php"],
+    "description": "a minimalism framework",
+    "keywords": ["framework", "php"],
     "homepage": "https://github.com/iguoji/minimal-framework",
     "license": "Apache-2.0",
     "require": {
-        "php": ">=8.0.0",
-        "ext-redis": "*",
-        "ext-swoole": ">=4.6",
+        "php": "^8.0",
         "ext-mbstring": "*",
-        "iguoji/minimal-annotation": "dev-master",
+        "psr/container": "^1.0",
+        "monolog/monolog": "^2.2",
+        "symfony/console": "^5.2",
+        "nikic/fast-route": "^1.3",
         "iguoji/minimal-validate": "dev-master",
-        "iguoji/minimal-container": "dev-master",
         "iguoji/minimal-support": "dev-master",
         "iguoji/minimal-database": "dev-master",
         "iguoji/minimal-cache": "dev-master"
     },
     "autoload": {
         "psr-4": {
-            "Minimal\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
+            "Minimal\\": "src/",
             "App\\": "tests/app/"
-        }
+        },
+        "files": [
+            "src/Functions.php"
+        ]
     },
     "config": {
         "optimize-autoloader": true,
