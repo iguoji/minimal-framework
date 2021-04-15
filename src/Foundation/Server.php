@@ -114,7 +114,6 @@ class Server implements ServerInterface
      */
     public function start() : bool
     {
-        $this->app->log->info(__CLASS__ . ':::' . __FUNCTION__);
         if ($this->status()) {
             throw new Exception('The server has started');
         }
@@ -300,8 +299,7 @@ class Server implements ServerInterface
      */
     public function onWorkerError(\Swoole\Server $server, int $worker_id, int $worker_pid, int $exit_code, int $signal) : bool
     {
-        $this->app->log->debug(__FUNCTION__, error_get_last() ?? []);
-
+        $this->app->log->error($worker_id . ':' . $exit_code . ':' . $signal, error_get_last());
         return true;
     }
 
@@ -344,7 +342,6 @@ class Server implements ServerInterface
      */
     public function onRequest(\Swoole\Http\Request $request, \Swoole\Http\Response $response) : bool
     {
-        $this->app->log->debug(__CLASS__ . ':::' . __FUNCTION__);
         // 前置事件
         $bool = $this->app->event->trigger('onHttpBefore', [$request, $response]);
         if (false === $bool) {
@@ -366,8 +363,6 @@ class Server implements ServerInterface
      */
     public function onHttpBefore(string $method, array $arguments) : bool
     {
-        $this->app->log->debug(__CLASS__ . ':::' . __FUNCTION__);
-
         // 获取参数
         [$request, $response] = $arguments;
 
@@ -386,7 +381,6 @@ class Server implements ServerInterface
      */
     public function onHttp(string $method, array $arguments) : bool
     {
-        $this->app->log->debug(__CLASS__ . ':::' . __FUNCTION__);
 
         // 获取参数
         [$request, $response] = $arguments;
@@ -400,63 +394,31 @@ class Server implements ServerInterface
                 'data'      =>  [],
             ];
             try {
-
                 // 匹配路由
-                $handler = $this->app->route->dispatch(
-                    $request->server['request_method']
+                $route = $this->app->route->dispatch(
+                    $request->header['host']
+                    , $request->server['request_method']
                     , $request->server['request_uri'] ?? $request->server['path_info']
                 );
-                if (is_array($handler) && 2 === count($handler) && is_string($handler[0])) {
-                    $handler[0] = $this->app->make($handler[0]);
+                if (empty($route)) {
+                    throw new Exception('Sorry. api not found');
+                }
+                if (is_array($route['callback']) && 2 === count($route['callback']) && is_string($route['callback'][0])) {
+                    $route['callback'][0] = $this->app->make($route['callback'][0]);
                 }
 
                 // 回调拆分
-                [$controller, $action] = $handler;
-
-                // 参数验证
-                $this->app->event->trigger('onValidate', [
-                    $handler
-                    , array_merge(
-                        $request->get ?? [], $request->post ?? []
-                    )
-                ]);
-
-                // 控制器结果
-                $result['data'] = $controller->$action($request, $response) ?? [];
-
-                /*// 匹配路由
-                $route = $this->app->getRoute(
-                    $req->server['request_uri'] ?? $req->server['path_info'],
-                    $req->header['host']
-                );
-                if (is_null($route)) {
-                    throw new RuntimeException('api not found', 404);
-                }
-                if (!in_array(strtoupper($req->server['request_method']), $route['methods'])) {
-                    throw new RuntimeException('method not allowed');
-                }
-
-                // 回调拆分
-                [$controller, $action] = $route['callable'];
-
-                // 参数验证
-                if (isset($route['validate']) && method_exists($route['validate'], $action)) {
-                    $complex = $route['validate']->$action();
-                    $req->params = $complex->check(array_merge(
-                        $req->get ?? [], $req->post ?? []
-                    ));
-                }
+                [$controller, $action] = $route['callback'];
 
                 // 中间件 + 用户操作
-                $callback = array_reduce(array_reverse($route['middlewares']), function($next, $class) use($req, $res){
-                    return function() use($class, $req, $next) {
-                        return (new $class)->handle($req, $next);
+                $callback = array_reduce(array_reverse($route['middlewares'] ?? []), function($next, $class) use($request, $response){
+                    return function() use($class, $request, $next) {
+                        return (new $class)->handle($request, $next);
                     };
-                }, fn() => $controller->$action($req, $res));
+                }, fn() => $controller->$action($request, $response));
 
                 // 保存控制器返回的结果
-                $result['data'] = $callback();*/
-
+                $result['data'] = $callback();
             } catch (Throwable $th) {
                 // 保存异常引起的结果
                 $result = array_merge($result, [
@@ -483,8 +445,6 @@ class Server implements ServerInterface
      */
     public function onHttpAfter(string $method, array $arguments) : bool
     {
-        $this->app->log->debug(__CLASS__ . ':::' . __FUNCTION__);
-
         // 获取参数
         [$request, $response] = $arguments;
 
@@ -497,10 +457,6 @@ class Server implements ServerInterface
      */
     public function onMessage(\Swoole\WebSocket\Server $server, \Swoole\WebSocket\Frame $frame) : bool
     {
-        $this->app->log->debug(__CLASS__ . ':::' . __FUNCTION__);
-
-        $this->app->log->debug($frame->data);
-
         return true;
     }
 }

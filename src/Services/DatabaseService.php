@@ -25,7 +25,7 @@ class DatabaseService implements Service
     {
         $config = $this->app->config->get('db', []);
 
-        $this->app->set('cache', new Manager($config));
+        $this->app->set('database', new Manager($config));
     }
 
     /**

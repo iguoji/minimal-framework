@@ -35,6 +35,7 @@ class Application extends Container
         'service'   =>  \Minimal\Foundation\Service::class,
         'event'     =>  \Minimal\Foundation\Event::class,
         'server'    =>  \Minimal\Foundation\Server::class,
+        'route'     =>  \Minimal\Route\Manager::class,
     ];
 
     /**

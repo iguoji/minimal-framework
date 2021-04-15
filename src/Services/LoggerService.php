@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace Minimal\Services;
 
 use Monolog\Logger;
-use Monolog\Handler\StreamHandler;
-use Monolog\Formatter\LineFormatter;
 use Minimal\Application;
 use Minimal\Contracts\Service;
 
@@ -25,16 +23,7 @@ class LoggerService implements Service
      */
     public function register() : void
     {
-        $logger = new Logger('SYSTEM');
-
-        $handler = new StreamHandler('php://stderr');
-        $handler->setFormatter(new LineFormatter(
-            "[%datetime%][%channel%][%level_name%] %message% %context% %extra%\n",
-            'Y-m-d H:i:s'
-        ));
-
-        $logger->pushHandler($handler);
-        $this->app->set('log', $logger);
+        $this->app->set('log', new Logger('SYSTEM'));
     }
 
     /**
@@ -42,12 +31,13 @@ class LoggerService implements Service
      */
     public function boot() : void
     {
-        $configs = $this->app->config->get('log', []);
+        $configs = array_reverse($this->app->config->get('log', []));
         foreach ($configs as $name => $config) {
             $constructor = $config['handler']['constructor'];
-            if (isset($constructor['stream'])) {
-                $constructor['stream'] = $this->app->logPath($constructor['stream']);
-            } else if (isset($constructor['filename'])) {
+            // if (isset($constructor['stream'])) {
+            //     $constructor['stream'] = $this->app->logPath($constructor['stream']);
+            // } else
+            if (isset($constructor['filename'])) {
                 $constructor['filename'] = $this->app->logPath($constructor['filename']);
             }
             if (!isset($constructor['level'])) {

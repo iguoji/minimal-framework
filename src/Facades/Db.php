@@ -9,6 +9,6 @@ class Db extends Facade
 {
     public static function getClass() : string
     {
-        return 'db';
+        return 'database';
     }
 }
