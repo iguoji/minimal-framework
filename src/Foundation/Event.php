@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Minimal\Foundation;
 
 use Closure;
+use Throwable;
 use RuntimeException;
 use Minimal\Application;
 use Minimal\Contracts\Listener;
@@ -14,9 +15,9 @@ use Minimal\Contracts\Listener;
 class Event
 {
     /**
-     * 事件集合
+     * 数据绑定
      */
-    protected array $events = [];
+    protected array $bindings = [];
 
     /**
      * 构造方法
@@ -27,14 +28,15 @@ class Event
     /**
      * 批量绑定
      */
-    public function bind(string $name, Closure|array|string $class) : void
+    public function bind(string $name, Closure|array|string $class = null) : void
     {
         if ($class instanceof Closure) {
             $this->app->event->on($name, $class);
         } else {
+            $class = $name;
             $listener = $this->app->get($class);
             if (!$listener instanceof Listener) {
-                throw new Exception(sprintf('listener "%s" must implements "%s"', $class, Listener::class));
+                throw new RuntimeException(sprintf('listener "%s" must implements "%s"', $class, Listener::class));
             }
 
             foreach ($listener->events() as $key => $value) {
@@ -52,17 +54,19 @@ class Event
      */
     public function on(string $name, Closure|array $callback, int $priority = 0) : void
     {
-        if (!isset($this->events[$name])) {
-            $this->events[$name] = [];
+        if (!isset($this->bindings[$name])) {
+            $this->bindings[$name] = [];
         }
-        $index = count($this->events[$name]);
-        foreach ($this->events[$name] as $key => $array) {
+
+        $index = count($this->bindings[$name]);
+        foreach ($this->bindings[$name] as $key => $array) {
             if ($priority > $array['priority']) {
                 $index = $key;
                 break;
             }
         }
-        array_splice($this->events[$name], $index, 0, [[
+
+        array_splice($this->bindings[$name], $index, 0, [[
             'callable'  =>  $callback,
             'priority'  =>  $priority,
         ]]);
@@ -73,12 +77,21 @@ class Event
      */
     public function trigger(string $name, array $arguments = []) : bool
     {
-        $events = $this->events[$name] ?? [];
-        foreach ($events as $key => $array) {
-            $bool = $this->app->call($array['callable'], $name, $arguments);
-            if (false === $bool) {
-                return false;
+        try {
+            $this->app->log->debug($name);
+            $events = $this->bindings[$name] ?? [];
+            foreach ($events as $key => $array) {
+                $bool = $this->app->call($array['callable'], $name, $arguments);
+                if (false === $bool) {
+                    return false;
+                }
             }
+        } catch (Throwable $th) {
+            $this->app->log->error($th->getMessage(), [
+                'File'   =>  $th->getFile(),
+                'Line'   =>  $th->getLine(),
+            ]);
+            return false;
         }
         return true;
     }

@@ -7,12 +7,11 @@ use Closure;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionFunction;
-use Psr\Container\ContainerInterface;
 
 /**
  * 容器类
  */
-class Container implements ContainerInterface
+class Container
 {
     /**
      * 对象实例

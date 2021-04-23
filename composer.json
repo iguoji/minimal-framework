@@ -7,15 +7,7 @@
     "license": "Apache-2.0",
     "require": {
         "php": "^8.0",
-        "ext-mbstring": "*",
-        "psr/container": "^1.0",
-        "monolog/monolog": "^2.2",
-        "symfony/console": "^5.2",
-        "iguoji/minimal-validate": "dev-master",
-        "iguoji/minimal-support": "dev-master",
-        "iguoji/minimal-database": "dev-master",
-        "iguoji/minimal-cache": "dev-master",
-        "iguoji/minimal-route": "dev-master"
+        "ext-mbstring": "*"
     },
     "autoload": {
         "psr-4": {

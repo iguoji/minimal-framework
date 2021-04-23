@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Minimal\Foundation;
 
+use Minimal\Application;
 use Minimal\Support\Arr;
 
 /**
@@ -18,15 +19,26 @@ class Config
     /**
      * 构造函数
      */
-    public function __construct(array $data)
+    public function __construct(protected Application $app)
     {
-        $this->dataset = $data;
+        $this->load();
+    }
+
+    /**
+     * 载入配置
+     */
+    public function load() : void
+    {
+        $files = glob($this->app->configPath('*.php'));
+        foreach ($files as $file) {
+            $this->dataset[pathinfo($file, PATHINFO_FILENAME)] = require_once $file;
+        }
     }
 
     /**
      * 获取所有配置
      */
-    public function all()
+    public function all() : array
     {
         return $this->dataset;
     }
@@ -34,7 +46,7 @@ class Config
     /**
      * 获取配置
      */
-    public function get($key, $default = null)
+    public function get(string $key, mixed $default = null) : mixed
     {
         return Arr::get($this->dataset, $key, $default);
     }
@@ -42,7 +54,7 @@ class Config
     /**
      * 是否存在配置
      */
-    public function has($key)
+    public function has(string $key) : bool
     {
         return Arr::has($this->dataset, $key);
     }
@@ -50,7 +62,7 @@ class Config
     /**
      * 设置数据
      */
-    public function set($key, $value)
+    public function set(string $key, mixed $value) : mixed
     {
         return Arr::set($this->dataset, $key, $value);
     }

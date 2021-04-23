@@ -118,18 +118,18 @@ class Server implements ServerInterface
             throw new Exception('The server has started');
         }
 
+        foreach ([
+            \Minimal\Listeners\Http\OnHttpBefore::class,
+            \Minimal\Listeners\Http\OnHttp::class,
+            \Minimal\Listeners\Http\OnHttpAfter::class,
+        ] as $listener) {
+            $this->app->event->bind($listener);
+        }
+
         $config = $this->getConfig();
 
         $this->handle = new $config['class'](...array_values($config['constructor']));
         $this->handle->set($config['settings'] ?? []);
-
-        foreach ([
-            'onHttpBefore'                  =>  [$this, 'onHttpBefore'],
-            'onHttp'                        =>  [$this, 'onHttp'],
-            'onHttpAfter'                   =>  [$this, 'onHttpAfter'],
-        ] as $evName => $callback) {
-            $this->app->event->on($evName, $callback);
-        }
 
         \Swoole\Runtime::enableCoroutine($config['flags'] ?? SWOOLE_HOOK_ALL);
 
@@ -214,19 +214,33 @@ class Server implements ServerInterface
     public function defaultServerEvents() : array
     {
         return [
-            \Swoole\Server::class               =>  [
-                'onStart'                       =>  [$this, 'onStart'],
-                'onManagerStart'                =>  [$this, 'onManagerStart'],
-                'onWorkerStart'                 =>  [$this, 'onWorkerStart'],
-                'onWorkerError'                 =>  [$this, 'onWorkerError'],
-                'onWorkerExit'                  =>  [$this, 'onWorkerExit'],
-                'onTask'                        =>  [$this, 'onTask'],
+            \Swoole\Server::class   =>  [
+                'OnStart'             =>  ['Server:OnStart',          \Minimal\Listeners\Server\OnStart::class],
+                'OnShutdown'          =>  ['Server:OnShutdown',       \Minimal\Listeners\Server\OnShutdown::class],
+                'OnWorkerStart'       =>  ['Server:OnWorkerStart',    \Minimal\Listeners\Server\OnWorkerStart::class],
+                'OnWorkerStop'        =>  ['Server:OnWorkerStop',     \Minimal\Listeners\Server\OnWorkerStop::class],
+                'OnWorkerExit'        =>  ['Server:OnWorkerExit',     \Minimal\Listeners\Server\OnWorkerExit::class],
+                'OnConnect'           =>  ['Server:OnConnect',        \Minimal\Listeners\Server\OnConnect::class],
+                'OnReceive'           =>  ['Server:OnReceive',        \Minimal\Listeners\Server\OnReceive::class],
+                'OnPacket'            =>  ['Server:OnPacket',         \Minimal\Listeners\Server\OnPacket::class],
+                'OnClose'             =>  ['Server:OnClose',          \Minimal\Listeners\Server\OnClose::class],
+                'OnTask'              =>  ['Server:OnTask',           \Minimal\Listeners\Server\OnTask::class],
+                'OnFinish'            =>  ['Server:OnFinish',         \Minimal\Listeners\Server\OnFinish::class],
+                'OnPipeMessage'       =>  ['Server:OnPipeMessage',    \Minimal\Listeners\Server\OnPipeMessage::class],
+                'OnWorkerError'       =>  ['Server:OnWorkerError',    \Minimal\Listeners\Server\OnWorkerError::class],
+                'OnManagerStart'      =>  ['Server:OnManagerStart',   \Minimal\Listeners\Server\OnManagerStart::class],
+                'OnManagerStop'       =>  ['Server:OnManagerStop',    \Minimal\Listeners\Server\OnManagerStop::class],
+                'OnBeforeReload'      =>  ['Server:OnBeforeReload',   \Minimal\Listeners\Server\OnBeforeReload::class],
+                'OnAfterReload'       =>  ['Server:OnAfterReload',    \Minimal\Listeners\Server\OnAfterReload::class],
             ],
-            \Swoole\Http\Server::class     =>  [
-                'onRequest'                     =>  [$this, 'onRequest'],
+            \Swoole\Http\Server::class  =>  [
+                'OnRequest'           =>  ['Server:OnRequest',        \Minimal\Listeners\Http\OnRequest::class],
             ],
             \Swoole\WebSocket\Server::class     =>  [
-                'onMessage'                     =>  [$this, 'onMessage'],
+                'OnHandShake'         =>  ['Server:OnHandShake',      \Minimal\Listeners\WebSocket\OnHandShake::class],
+                'OnMessage'           =>  ['Server:OnMessage',        \Minimal\Listeners\WebSocket\OnMessage::class],
+                'OnOpen'              =>  ['Server:OnOpen',           \Minimal\Listeners\WebSocket\OnOpen::class],
+                'OnRequest'           =>  ['Server:OnRequest',        \Minimal\Listeners\WebSocket\OnRequest::class],
             ],
         ];
     }
@@ -239,21 +253,22 @@ class Server implements ServerInterface
         $config = $this->getConfig();
 
         $events = [];
-        foreach ($this->defaultServerEvents() as $interface => $bindings) {
-            if ($this->handle instanceof $interface) {
-                $events = array_merge($events, $bindings);
-            }
+        foreach ($this->defaultServerEvents() as $swooleEvent => $bindings) {
+            $events = array_merge($events, $bindings);
         }
         $events = array_merge($events, $config['callbacks'] ?? []);
 
-        foreach ($events as $evName => $callback) {
-            $this->app->event->on($evName, $callback);
+        foreach ($events as $evName => $bindings) {
+            $callback = $bindings;
+            if (is_array($callback)) {
+                if (2 !== count($bindings)) {
+                    throw new Exception('Server [' . $evName . '] event bind fail');
+                }
+                $callback = function(...$arguments) use($bindings){
+                    $this->app->event->trigger($bindings[0], $arguments);
+                };
 
-            if (!is_callable($callback) && (!is_array($callback) || (is_array($callback) && count($callback) != 2))) {
-                throw new Exception('Server [' . $evName . '] event bind fail');
-            }
-            if (is_array($callback) && is_string($callback[0])) {
-                $callback[0] = $this->app->get($callback[0]);
+                $this->app->event->bind($bindings[1]);
             }
 
             $sevName = false === stripos($evName, 'on') ? $evName : substr($evName, 2);
@@ -264,199 +279,13 @@ class Server implements ServerInterface
 
 
 
-    /**
-     * 启动后在主进程（master）的主线程回调此函数
-     */
-    public function onStart(\Swoole\Server $server) : bool
-    {
-        cli_set_process_title('php swoole master');
-
-        return true;
-    }
 
     /**
-     * 当管理进程启动时触发此事件
+     * 未定义方法
      */
-    public function onManagerStart(\Swoole\Server $server) : bool
+    public function __call(string $method, array $arguments)
     {
-        cli_set_process_title('php swoole manager');
-
-        return true;
-    }
-
-    /**
-     * 此事件在 Worker 进程 / Task 进程 启动时发生，这里创建的对象可以在进程生命周期内使用。
-     */
-    public function onWorkerStart(\Swoole\Server $server, int $workerId) : bool
-    {
-        cli_set_process_title(sprintf('php swoole %s worker #%s', $server->taskworker ? 'task' : 'normal', $workerId));
-
-        return true;
-    }
-
-    /**
-     * 当 Worker/Task 进程发生异常后会在 Manager 进程内回调此函数。
-     */
-    public function onWorkerError(\Swoole\Server $server, int $worker_id, int $worker_pid, int $exit_code, int $signal) : bool
-    {
-        $this->app->log->error($worker_id . ':' . $exit_code . ':' . $signal, error_get_last());
-        return true;
-    }
-
-    /**
-     * 仅在开启 reload_async 特性后有效。参见 如何正确的重启服务
-     */
-    public function onWorkerExit(\Swoole\Server $server, int $workerId) : bool
-    {
-        \Swoole\Timer::clearAll();
-
-        return true;
-    }
-
-    /**
-     * 在 task 进程内被调用。
-     * worker 进程可以使用 task 函数向 task_worker 进程投递新的任务。
-     * 当前的 Task 进程在调用 onTask 回调函数时会将进程状态切换为忙碌，
-     * 这时将不再接收新的 Task，
-     * 当 onTask 函数返回时会将进程状态切换为空闲然后继续接收新的 Task。
-     */
-    public function onTask(\Swoole\Server $server, int $task_id, int $src_worker_id, mixed $data) : bool
-    {
-        /**
-         *
-         * Swoole\Server\Task Object
-         *   (
-         *       [data] => OnGameNext
-         *       [dispatch_time] => 1612700724.3543
-         *       [id] => 4
-         *       [worker_id] => 0
-         *       [flags] => 132
-         *   )
-         */
-
-        return true;
-    }
-
-    /**
-     * 在收到一个完整的 HTTP 请求后，会回调此函数
-     */
-    public function onRequest(\Swoole\Http\Request $request, \Swoole\Http\Response $response) : bool
-    {
-        // 前置事件
-        $bool = $this->app->event->trigger('onHttpBefore', [$request, $response]);
-        if (false === $bool) {
-            return false;
-        }
-
-        // 请求处理
-        $bool = $this->app->event->trigger('onHttp', [$request, $response]);
-        if (false === $bool) {
-            return false;
-        }
-
-        // 后置事件
-        return $this->app->event->trigger('onHttpAfter', [$request, $response]);;
-    }
-
-    /**
-     * Http - 前置事件
-     */
-    public function onHttpBefore(string $method, array $arguments) : bool
-    {
-        // 获取参数
-        [$request, $response] = $arguments;
-
-        // Favicon
-        if (($request->server['request_uri'] ?? $request->server['path_info']) == '/favicon.ico') {
-            $response->end();
-            return false;
-        }
-
-        // 返回结果
-        return true;
-    }
-
-    /**
-     * Http - 请求处理
-     */
-    public function onHttp(string $method, array $arguments) : bool
-    {
-
-        // 获取参数
-        [$request, $response] = $arguments;
-
-        // 协程处理
-        return \Swoole\Coroutine::create(function() use($request, $response){
-            // 最终结果
-            $result = [
-                'code'      =>  200,
-                'message'   =>  '恭喜您、操作成功！',
-                'data'      =>  [],
-            ];
-            try {
-                // 匹配路由
-                $route = $this->app->route->dispatch(
-                    $request->header['host']
-                    , $request->server['request_method']
-                    , $request->server['request_uri'] ?? $request->server['path_info']
-                );
-                if (empty($route)) {
-                    throw new Exception('Sorry. api not found');
-                }
-                if (is_array($route['callback']) && 2 === count($route['callback']) && is_string($route['callback'][0])) {
-                    $route['callback'][0] = $this->app->make($route['callback'][0]);
-                }
-
-                // 回调拆分
-                [$controller, $action] = $route['callback'];
-
-                // 中间件 + 用户操作
-                $callback = array_reduce(array_reverse($route['middlewares'] ?? []), function($next, $class) use($request, $response){
-                    return function() use($class, $request, $next) {
-                        return (new $class)->handle($request, $next);
-                    };
-                }, fn() => $controller->$action($request, $response));
-
-                // 保存控制器返回的结果
-                $result['data'] = $callback();
-            } catch (Throwable $th) {
-                // 保存异常引起的结果
-                $result = array_merge($result, [
-                    'code'      =>  $th->getCode() ?: 500,
-                    'message'   =>  $th->getMessage(),
-                    'file'      =>  $th->getFile(),
-                    'line'      =>  $th->getLine(),
-                    'data'      =>  method_exists($th, 'getData') ? $th->getData() : [],
-                    'trace'     =>  $th->getTrace(),
-                ]);
-            }
-
-            // 输出结果
-            if ($response->isWritable()) {
-                $response->status(200);
-                $response->header('Content-Type', 'application/json;charset=utf-8');
-                $response->end(json_encode($result));
-            }
-        }) > 0;
-    }
-
-    /**
-     * Http - 后置事件
-     */
-    public function onHttpAfter(string $method, array $arguments) : bool
-    {
-        // 获取参数
-        [$request, $response] = $arguments;
-
-        // 返回结果
-        return true;
-    }
-
-    /**
-     * 当服务器收到来自客户端的数据帧时会回调此函数。
-     */
-    public function onMessage(\Swoole\WebSocket\Server $server, \Swoole\WebSocket\Frame $frame) : bool
-    {
-        return true;
+        $this->app->log->debug($method, $arguments);
+        return $this->handle->$method(...$arguments);
     }
 }

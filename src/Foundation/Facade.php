@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Minimal\Foundation;
 
 use RuntimeException;
-use Psr\Container\ContainerInterface;
 
 /**
  * 门面类
@@ -14,12 +13,12 @@ abstract class Facade
     /**
      * 容器对象
      */
-    protected static ContainerInterface $container;
+    protected static Container $container;
 
     /**
      * 注册容器
      */
-    public static function setContainer(ContainerInterface $container) : void
+    public static function setContainer(Container $container) : void
     {
         self::$container = $container;
     }

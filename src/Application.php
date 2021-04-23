@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Minimal;
 
 use Minimal\Foundation\Facade;
-use Minimal\Foundation\Service;
 use Minimal\Foundation\Container;
 
 /**
@@ -15,7 +14,7 @@ class Application extends Container
     /**
      * 版本号码
      */
-    const VERSION = '1.0.0';
+    const VERSION = '0.1.0';
 
     /**
      * 目录列表
@@ -26,31 +25,32 @@ class Application extends Container
     protected string $routePath;        // 路由目录：  /config/route/
     protected string $runtimePath;      // 运行时目录：/runtime/
     protected string $logPath;          // 日志目录：  /runtime/logs/
-    protected string $cachePath;        // 日志目录：  /runtime/cache/
+    protected string $cachePath;        // 缓存目录：  /runtime/cache/
 
     /**
      * 别名集合
      */
     protected array $aliases = [
-        'service'   =>  \Minimal\Foundation\Service::class,
-        'event'     =>  \Minimal\Foundation\Event::class,
-        'server'    =>  \Minimal\Foundation\Server::class,
-        'route'     =>  \Minimal\Route\Manager::class,
+        'env'               =>  \Minimal\Foundation\Env::class,
+        'config'            =>  \Minimal\Foundation\Config::class,
+        'event'             =>  \Minimal\Foundation\Event::class,
+        'log'               =>  \Minimal\Foundation\Log::class,
+        'server'            =>  \Minimal\Foundation\Server::class,
+        'route'             =>  \Minimal\Foundation\Route::class,
+        'cache'             =>  \Minimal\Foundation\Cache::class,
+        'database'          =>  \Minimal\Foundation\Database::class,
+        'queue'             =>  \Minimal\Foundation\Queue::class,
     ];
 
     /**
-     * 服务集合
+     * 事件集合
      */
-    protected array $services = [
-        'error'     =>  \Minimal\Services\ErrorService::class,
-        'env'       =>  \Minimal\Services\EnvService::class,
-        'config'    =>  \Minimal\Services\ConfigService::class,
-        'log'       =>  \Minimal\Services\LoggerService::class,             // https://github.com/Seldaek/monolog
-        'console'   =>  \Minimal\Services\ConsoleService::class,            // https://github.com/symfony/console
-        'event'     =>  \Minimal\Services\EventService::class,
-        'cache'     =>  \Minimal\Services\CacheService::class,
-        'database'  =>  \Minimal\Services\DatabaseService::class,
-        'route'     =>  \Minimal\Services\RouteService::class,              // https://github.com/nikic/FastRoute
+    protected array $listeners = [
+        \Minimal\Listeners\Application\OnStart::class,
+        \Minimal\Listeners\Application\OnReload::class,
+        \Minimal\Listeners\Application\OnRestart::class,
+        \Minimal\Listeners\Application\OnStatus::class,
+        \Minimal\Listeners\Application\OnStop::class,
     ];
 
     /**
@@ -58,40 +58,91 @@ class Application extends Container
      */
     public function __construct(string $basePath)
     {
-        // 基础目录
-        $this->useBasePath($basePath);
         // 绑定容器
         $this->set('app', $this);
         $this->set('container', $this);
-        // 服务绑定
-        $this->set('service', new Service($this, $this->services));
+        // 基础目录
+        $this->useBasePath($basePath);
+        // 错误绑定
+        $this->bindErrorHandler();
+        // 事件绑定
+        $this->bindListeners();
         // 门面注入
         Facade::setContainer($this);
     }
 
     /**
-     * 执行命令
+     * 错误绑定
      */
-    public function execute(array $argv = []) : void
+    public function bindErrorHandler() : void
     {
-        // 注册服务
-        $this->service->registerServices();
-        // 启动服务
-        $this->service->bootServices();
-
-        // 监听命令
-        $this->console->run();
+        // 错误程序
+        set_error_handler(function($errno, $message, $file, $line){
+            throw new \ErrorException($message, 0, $errno, $file, $line);
+        });
+        // 异常程序
+        set_exception_handler(function($th){
+            $logger = null;
+            if ($this->app->has('log')) {
+                $logger = $this->app->get('log');
+            }
+            if (is_null($logger)) {
+                echo '[ ' . date('Y-m-d H:i:s') . ' ] ' . __CLASS__ . PHP_EOL;
+                echo 'Messgae::' . $th->getMessage() . PHP_EOL;
+                echo 'File::' . $th->getFile() . PHP_EOL;
+                echo 'Line::' . $th->getLine() . PHP_EOL;
+                echo PHP_EOL;
+            } else {
+                $logger->error($th->getMessage(), [
+                    'File'   =>  $th->getFile(),
+                    'Line'   =>  $th->getLine(),
+                ]);
+            }
+        });
     }
 
-
-
+    /**
+     * 事件绑定
+     */
+    public function bindListeners() : void
+    {
+        foreach ($this->listeners as $class) {
+            $this->event->bind($class);
+        }
+    }
 
     /**
-     * 规范目录
+     * 执行命令
      */
-    public function folder(string $path = null) : string
+    public function execute(array $arguments = []) : void
     {
-        return empty($path) ? '' : (str_ends_with($path, DIRECTORY_SEPARATOR) ? $path : $path . DIRECTORY_SEPARATOR);
+        var_dump($this->env->all());
+
+        if (count($arguments) < 2) {
+            return;
+        }
+        $script = array_shift($arguments);
+
+        $array = explode(':', array_shift($arguments), 2);
+        if (1 === count($array)) {
+            array_unshift($array, 'Application');
+        }
+        $array = array_map(fn($s) => ucwords($s), $array);
+        if (!str_starts_with($array[1], 'On')) {
+            $array[1] = 'On' . $array[1];
+        }
+        $event = implode(':', $array);
+
+        $parameters = [];
+        foreach ($arguments as $value) {
+            $array = explode('=', $value, 2);
+            if (1 === count($array)) {
+                $array[] = true;
+            }
+            $parameters[ltrim($array[0], '-')] = $array[1];
+        }
+
+        $this->event->trigger($event, $parameters);
     }
 
     /**

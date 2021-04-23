@@ -10,13 +10,11 @@ interface Task
 {
     /**
      * 是否激活
-     * 与间隔配合可删除任务
      */
     public function active() : bool;
 
     /**
      * 时间间隔
-     * 与激活配合可删除任务
      */
     public function interval() : int;
 
