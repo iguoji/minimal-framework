@@ -106,6 +106,24 @@ class Validate
                     }
                 }
             }
+            // 类型
+            switch($item['type']) {
+                case 'int':
+                    $this->dataset[$name] = Type::int($this->dataset[$name]);
+                    break;
+                case 'float':
+                    $this->dataset[$name] = Type::float($this->dataset[$name]);
+                    break;
+                case 'bool':
+                    $this->dataset[$name] = Type::bool($this->dataset[$name]);
+                    break;
+                case 'array':
+                    $this->dataset[$name] = Type::array($this->dataset[$name]);
+                    break;
+                default:
+                    $this->dataset[$name] = Type::string($this->dataset[$name]);
+                    break;
+            }
 
             // 保存
             $result[$name] = $this->dataset[$name];
@@ -316,9 +334,10 @@ class Validate
      */
     public function min(int|float $num) : static
     {
-        return $this->call(function($value) use($num){
-            return $value >= $num;
-        }, __FUNCTION__, ['rule' => $num, 'unit' => $this->getType() == 'string' ? '长度' : '大小']);
+        $type = $this->getType();
+        return $this->call(function($value) use($num, $type){
+            return $type == 'string' ? strlen($value) >= $num : $value >= $num;
+        }, __FUNCTION__, ['rule' => $num, 'unit' => $type == 'string' ? '长度' : '大小']);
     }
 
     /**
@@ -326,9 +345,10 @@ class Validate
      */
     public function max(int|float $num) : static
     {
-        return $this->call(function($value) use($num){
-            return $value <= $num;
-        }, __FUNCTION__, ['rule' => $num, 'unit' => $this->getType() == 'string' ? '长度' : '大小']);
+        $type = $this->getType();
+        return $this->call(function($value) use($num, $type){
+            return $type == 'string' ? strlen($value) <= $num : $value <= $num;
+        }, __FUNCTION__, ['rule' => $num, 'unit' => $type == 'string' ? '长度' : '大小']);
     }
 
     /**

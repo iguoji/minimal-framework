@@ -11,8 +11,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Minimal\\": "src/",
-            "App\\": "tests/app/"
+            "Minimal\\": "src/"
         },
         "files": [
             "src/Functions.php"

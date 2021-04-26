@@ -27,3 +27,34 @@ if (!function_exists('config')) {
             : Config::get($key, $default);
     }
 }
+
+/**
+ * Ajax请求
+ */
+if (!function_exists('ajax')) {
+	function ajax(string $url, string $method = 'get', array $data = [], array $header = [], int $timeout = 2) : mixed
+	{
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL, $url);
+		curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+		if ($method == 'post') {
+			curl_setopt($ch, CURLOPT_POST, true);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+		}
+		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+		curl_setopt($ch, CURLOPT_ENCODING, 'gzip,deflate');
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+		curl_setopt($ch, CURLOPT_HEADER, false);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		if (!empty($header)) {
+			curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+		}
+		$res = curl_exec($ch);
+		if ($error = curl_errno($ch)) {
+			echo curl_error($ch), PHP_EOL;
+		}
+		curl_close($ch);
+		return $res;
+	}
+}

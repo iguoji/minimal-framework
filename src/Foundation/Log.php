@@ -122,12 +122,12 @@ class Log
             }
 
             // 终端输出
-            if (!empty($this->app->env->get('app.debug', true))) {
+            if (!empty($this->app->env->get('app.debug', false))) {
                 fwrite(STDIN, $message);
             }
 
             // 文件输出
-            if (true !== $this->app->env->get('log.enable', false)) {
+            if (true === $this->app->env->get('log.enable', false)) {
                 error_log($message, 3, $this->path(date('Y/m/d') . '.log'));
             }
         } catch (\Throwable $th) {

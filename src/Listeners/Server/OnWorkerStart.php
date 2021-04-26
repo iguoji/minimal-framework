@@ -43,7 +43,7 @@ class OnWorkerStart implements Listener
 
         // task
         if (1 === $workerId) {
-            $classes = $this->app->config->get('task');
+            $classes = $this->app->config->get('task', []);
             foreach ($classes as $class) {
                 $task = $this->app->make($class);
 

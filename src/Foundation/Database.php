@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Minimal\Foundation;
 
 use PDO;
+use Throwable;
 use PDOStatement;
 use PDOException;
 use StdClass;
@@ -61,7 +62,7 @@ class Database
     /**
      * 连接驱动
      */
-    public function connect(int $recount = 1) : mixed
+    public function connect(int $recount = 1) : static
     {
         try {
             $this->handle = new PDO($this->getDsn(), $this->config['username'], $this->config['password'], $this->getOptions());
@@ -181,6 +182,8 @@ class Database
      */
     public function from(string $table, string $as = null) : static
     {
+        $this->reset();
+
         $this->bindings['from'] = is_null($as) ? $this->backquote($table) : $this->backquote($table) . ' AS ' . $this->backquote($as);
 
         return $this;
@@ -790,14 +793,6 @@ class Database
     }
 
     /**
-     * 获取所有数据
-     */
-    public function getBindings() : array
-    {
-        return $this->bindings;
-    }
-
-    /**
      * 获取参数
      */
     public function getValue(string $key) : mixed
@@ -811,6 +806,18 @@ class Database
     public function getValues() : array
     {
         return $this->values;
+    }
+
+    /**
+     * 清空参数
+     */
+    public function reset() : static
+    {
+        $this->bindings = [];
+        $this->names = [];
+        $this->values = [];
+
+        return $this;
     }
 
 
@@ -835,38 +842,50 @@ class Database
             $this->connect();
         }
 
-        try {
-            // 调用方法
-            $result = $this->handle->$method(...$arguments);
+        // 尝试三次
+        for ($i = 0;$i < 3;$i++) {
+            try {
+                // 调用方法
+                $result = $this->handle->$method(...$arguments);
 
-            // 保存语句
-            if ($result instanceof PDOStatement) {
-                $this->sql = $result->queryString;
-            } else if ($method == 'exec') {
-                $this->sql = $arguments[0] ?? '';
-            }
-            $this->app->log->debug($this->sql, [$arguments, $this->values]);
-
-            // 主动执行
-            if ($result instanceof PDOStatement) {
-                $bool = $result->execute($this->values);
-                if (false === $bool) {
-                    throw new PDOException('database PDOStatement execute fail');
+                // 保存语句
+                if ($result instanceof PDOStatement) {
+                    $this->sql = $result->queryString;
+                } else if ($method == 'exec') {
+                    $this->sql = $arguments[0] ?? '';
                 }
+
+                // 主动执行
+                if ($result instanceof PDOStatement) {
+                    $bool = $result->execute($this->values);
+                    if (false === $bool) {
+                        throw new PDOException('database PDOStatement execute fail');
+                    }
+                }
+
+                // 执行成功
+                break;
+            } catch (Throwable $ex) {
+                // 错误重连
+                if (in_array($result->errorInfo()[1], [2002, 2006, 2013])) {
+                    $this->connect();
+                    continue;
+                }
+                // 记录错误
+                $this->app->log->error($ex->getMessage(), [
+                    'code'      =>  $ex->getCode(),
+                    'error1'    =>  $this->handle->errorInfo(),
+                    'error2'    =>  $result->errorInfo(),
+                    'method'    =>  $method,
+                    'arguments' =>  $arguments,
+                    'parameters'=>  $this->values,
+                ]);
+                throw $ex;
             }
-        } catch (PDOException $ex) {
-            $this->app->log->error($ex->getMessage(), [
-                'method'    =>  $method,
-                'arguments' =>  $arguments,
-                'parameters'=>  $this->values,
-            ]);
-            throw $ex;
         }
 
         // 清空参数
-        $this->bindings = [];
-        $this->names = [];
-        $this->values = [];
+        $this->reset();
 
         // 返回结果
         return $result;

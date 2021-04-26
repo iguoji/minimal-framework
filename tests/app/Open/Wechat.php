@@ -20,6 +20,7 @@ class Wechat
         $validate->string('ip', 'IP地址')->require()->length(6, 18)->ip();
         $validate->string('realname', '真实姓名')->length(2, 4)->chs();
         $validate->string('idcard', '身份证号码')->require()->length(15, 18)->idcard();
+        $validate->bool('rememberme', '记住我')->require();
 
 
 

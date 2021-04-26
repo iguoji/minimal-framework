@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Minimal\Listeners\Http;
 
+use Exception;
 use Throwable;
 use Minimal\Application;
 use Minimal\Contracts\Listener;
@@ -74,7 +75,7 @@ class OnHttp implements Listener
                     return function() use($class, $request, $next) {
                         return (new $class)->handle($request, $next);
                     };
-                }, fn() => $this->app->call($callable));
+                }, fn() => $this->app->call($callable, $request, $response));
 
                 // 保存控制器返回的结果
                 $result['data'] = $callback();

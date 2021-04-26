@@ -61,14 +61,14 @@ class Application extends Container
         // 绑定容器
         $this->set('app', $this);
         $this->set('container', $this);
+        // 门面注入
+        Facade::setContainer($this);
         // 基础目录
         $this->useBasePath($basePath);
         // 错误绑定
         $this->bindErrorHandler();
         // 事件绑定
         $this->bindListeners();
-        // 门面注入
-        Facade::setContainer($this);
     }
 
     /**
@@ -106,7 +106,9 @@ class Application extends Container
      */
     public function bindListeners() : void
     {
-        foreach ($this->listeners as $class) {
+        $userEvents = $this->config->get('listener', []);
+        $listeners = array_merge($this->listeners, $userEvents);
+        foreach ($listeners as $class) {
             $this->event->bind($class);
         }
     }
@@ -116,8 +118,6 @@ class Application extends Container
      */
     public function execute(array $arguments = []) : void
     {
-        var_dump($this->env->all());
-
         if (count($arguments) < 2) {
             return;
         }

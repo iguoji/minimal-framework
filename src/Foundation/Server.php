@@ -57,7 +57,7 @@ class Server implements ServerInterface
      */
     public function getConfig() : array
     {
-        $config = $this->config[$this->token] ?? [];
+        $config = $this->config[$this->token] ?? $this->getDefaultConfig();
 
         if (isset($config['settings']['log_file'])) {
             $config['settings']['log_file'] = $this->app->configPath($config['settings']['log_file']);
@@ -207,6 +207,35 @@ class Server implements ServerInterface
 
 
 
+
+    /**
+     * 获取默认配置
+     */
+    public function getDefaultConfig() : array
+    {
+        return [
+            'class'                     =>  \Swoole\WebSocket\Server::class,
+            'constructor'               =>  [
+                'host'                  =>  '0.0.0.0',
+                'port'                  =>  8080,
+            ],
+            'hook_flags'                =>  null,
+            'settings'                  =>  [
+                'worker_num'            =>  swoole_cpu_num(),
+                'task_worker_num'       =>  swoole_cpu_num(),
+                'task_enable_coroutine' =>  true,
+                'daemonize'             =>  true,
+                'log_file'              =>  '../runtime/log/swoole.log',
+                'pid_file'              =>  '../runtime/pid',
+                'reload_async'          =>  true,
+                'enable_coroutine'      =>  true,
+                'stats_file'            =>  '../runtime/status',
+                'document_root'         =>  '../public',
+                'enable_static_handler' =>  true,
+            ],
+            'callbacks'                 =>  [],
+        ];
+    }
 
     /**
      * 获取服务器事件
