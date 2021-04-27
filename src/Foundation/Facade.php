@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace Minimal\Foundation;
 
-use RuntimeException;
-
 /**
  * 门面类
  */

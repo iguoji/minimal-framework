@@ -67,8 +67,11 @@ class Arr
 
         $keys = explode('.', $key);
         foreach ($keys as $segment) {
-            if (is_array($array) && isset($array[$segment])) {
+            if (isset($array[$segment])) {
                 $array = $array[$segment];
+                if (!is_array($array)) {
+                    break;
+                }
             } else {
                 return $default;
             }

@@ -47,6 +47,35 @@ class Database
     protected array $values = [];
 
     /**
+     * 预定义选项
+     */
+    protected array $options = [];
+
+    /**
+     * 预定义属性
+     */
+    protected array $attributes = [
+        /**
+         * 设置错误模式为抛出异常
+         */
+        PDO::ATTR_ERRMODE           =>  PDO::ERRMODE_EXCEPTION,
+
+        /**
+         * 启用或禁用预处理语句的模拟。
+         * 有些驱动不支持或有限度地支持本地预处理。
+         * 使用此设置强制PDO总是模拟预处理语句（如果为 true ），或试着使用本地预处理语句（如果为 false）。
+         * 如果驱动不能成功预处理当前查询，它将总是回到模拟预处理语句上。
+         */
+        PDO::ATTR_EMULATE_PREPARES  =>  false,
+
+        /**
+         * 提取的时候将数值转换为字符串
+         * 只有同时和 PDO::ATTR_EMULATE_PREPARES 属性保持为 false 才有效果
+         */
+        PDO::ATTR_STRINGIFY_FETCHES =>  false,
+    ];
+
+    /**
      * 构造函数
      */
     public function __construct(protected Application $app)
@@ -102,11 +131,11 @@ class Database
      */
     private function getOptions() : array
     {
-        return array_merge([
-            PDO::ATTR_ERRMODE           =>  PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_EMULATE_PREPARES  =>  false,
-            PDO::ATTR_STRINGIFY_FETCHES =>  false,
-        ], $this->config['options'] ?? []);
+        $userOptions = $this->config['options'] ?? [];
+        foreach ($userOptions as $key => $value) {
+            $this->options[$key] = $value;
+        }
+        return $this->options;
     }
 
     /**
@@ -114,9 +143,11 @@ class Database
      */
     private function getAttributes() : array
     {
-        return array_merge([
-
-        ], $this->config['attributes'] ?? []);
+        $userAttributes = $this->config['attributes'] ?? [];
+        foreach ($userAttributes as $key => $value) {
+            $this->attributes[$key] = $value;
+        }
+        return $this->attributes;
     }
 
 
@@ -128,6 +159,9 @@ class Database
      */
     public function beginTransaction() : bool
     {
+        if ($this->inTransaction()) {
+            return true;
+        }
         return $this->__call('beginTransaction', []);
     }
 
@@ -136,7 +170,10 @@ class Database
      */
     public function commit() : bool
     {
-        return $this->__call('commit', []);
+        if ($this->inTransaction()) {
+            return $this->__call('commit', []);
+        }
+        return true;
     }
 
     /**
@@ -144,7 +181,10 @@ class Database
      */
     public function rollBack() : bool
     {
-        return $this->__call('rollBack', []);
+        if ($this->inTransaction()) {
+            return $this->__call('rollBack', []);
+        }
+        return true;
     }
 
     /**
@@ -867,7 +907,11 @@ class Database
                 break;
             } catch (Throwable $ex) {
                 // 错误重连
-                if (in_array($result->errorInfo()[1], [2002, 2006, 2013])) {
+                if (
+                    in_array($this->handle->errorInfo()[1], [2002, 2006, 2013]) ||
+                    (isset($result) && !is_null($result) && in_array($result->errorInfo()[1], [2002, 2006, 2013]))
+                ) {
+                    $this->app->log->info('数据库重连：');
                     $this->connect();
                     continue;
                 }
@@ -875,7 +919,7 @@ class Database
                 $this->app->log->error($ex->getMessage(), [
                     'code'      =>  $ex->getCode(),
                     'error1'    =>  $this->handle->errorInfo(),
-                    'error2'    =>  $result->errorInfo(),
+                    'error2'    =>  isset($result) && !is_null($result) ? $result->errorInfo() : [],
                     'method'    =>  $method,
                     'arguments' =>  $arguments,
                     'parameters'=>  $this->values,

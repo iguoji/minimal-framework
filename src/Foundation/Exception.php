@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace Minimal\Contracts;
+namespace Minimal\Foundation;
 
 /**
  * 异常类
  */
-abstract class Exception extends \Exception
+class Exception extends \Exception
 {
     /**
      * 异常数据

@@ -151,6 +151,9 @@ class Type
             case 'string':
                 return self::string($value);
                 break;
+            case 'array':
+                return self::array($value);
+                break;
             default:
                 return $value;
                 break;

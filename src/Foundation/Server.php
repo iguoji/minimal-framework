@@ -5,7 +5,6 @@ namespace Minimal\Foundation;
 
 use Closure;
 use Throwable;
-use Exception;
 use Swoole\Process;
 use Minimal\Application;
 use Minimal\Contracts\Listener;

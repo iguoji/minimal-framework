@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 namespace Minimal\Listeners\Http;
 
-use Exception;
 use Throwable;
 use Minimal\Application;
 use Minimal\Contracts\Listener;
+use Minimal\Foundation\Exception;
 
 /**
  * 在收到一个完整的 HTTP 请求后，会回调此函数。

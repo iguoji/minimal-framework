@@ -137,6 +137,14 @@ class Cache
     }
 
     /**
+     * 删除数据
+     */
+    public function remove(string|int $key) : bool
+    {
+        return $this->delete($key);
+    }
+
+    /**
      * 清空数据
      */
     public function clear() : bool

@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Minimal\Foundation;
 
-use TypeError;
 use Minimal\Support\Type;
 
 /**
@@ -14,7 +13,12 @@ class Validate
     /**
      * 数据绑定
      */
-    protected array $bindings;
+    protected array $bindings = [];
+
+    /**
+     * 数据仪表盘
+     */
+    protected array $dashboard = [];
 
     /**
      * 当前参数
@@ -28,9 +32,12 @@ class Validate
     protected array $messages = [
         'require'       =>  '很抱歉、:name必须提供！',
         'in'            =>  '很抱歉、:name只能在[:rule]范围内！',
-        'min'           =>  '很抱歉、:name的:unit不能小于:rule！',
-        'max'           =>  '很抱歉、:name的:unit不能超过:rule！',
+        'min'           =>  '很抱歉、:name的大小不能小于:rule！',
+        'max'           =>  '很抱歉、:name的大小不能超过:rule！',
+        'length_min'    =>  '很抱歉、:name的长度不能小于:rule！',
+        'length_max'    =>  '很抱歉、:name的长度不能超过:rule！',
 
+        'digit'         =>  '很抱歉、:name只能是[0-9]组成的纯数字！',
         'alpha'         =>  '很抱歉、:name只能是纯字母！',
         'alphaNum'      =>  '很抱歉、:name只能是字母和数字！',
         'alphaDash'     =>  '很抱歉、:name只能是字母和数字，下划线_及破折号-！',
@@ -60,78 +67,79 @@ class Validate
     {
         // 最终结果
         $result = [];
-
         // 循环参数
         foreach ($this->bindings as $name => $item) {
-            // 上下文
-            $context = ['name' => $item['alias']];
-
-            // 默认值
-            if (!isset($this->dataset[$name]) && array_key_exists('default', $item)) {
-                $this->dataset[$name] = $item['default'];
-            }
-            // 必填
-            if (!isset($this->dataset[$name]) && !empty($item['require'])) {
-                throw new TypeError($this->getMessage('require', $context));
-            }
-            // 不是必填、也没默认值、而且用户还没提供
-            if (!isset($this->dataset[$name])) {
-                continue;
-            }
-
-            // 过滤
-            if (isset($item['rule']['filter'])) {
-                foreach ($item['rule']['filter'] as $token => $filter) {
-                    $bool = filter_var($this->dataset[$name], $filter[0], $filter[1]);
-                    if (false === $bool) {
-                        throw new TypeError($this->getMessage($token, $context + $filter[2]));
-                    }
+            // 检查单项
+            if (!is_null($value = $this->value($name))) {
+                // 仅校验
+                if (!empty($item['unset'])) {
+                    continue;
                 }
+                // 保存数据
+                $result[$name] = $value;
             }
-            // 正则
-            if (isset($item['rule']['regex'])) {
-                foreach ($item['rule']['regex'] as $token => $regex) {
-                    $bool = 1 === preg_match($regex[0], (string) $this->dataset[$name]);
-                    if (false === $bool) {
-                        throw new TypeError($this->getMessage($token, $context + $regex[1]));
-                    }
-                }
-            }
-            // 回调
-            if (isset($item['rule']['call'])) {
-                foreach ($item['rule']['call'] as $token => $callback) {
-                    $bool = $callback[0]($this->dataset[$name], $this->dataset);
-                    if (false === $bool) {
-                        throw new TypeError($this->getMessage($token, $context + $callback[1]));
-                    }
-                }
-            }
-            // 类型
-            switch($item['type']) {
-                case 'int':
-                    $this->dataset[$name] = Type::int($this->dataset[$name]);
-                    break;
-                case 'float':
-                    $this->dataset[$name] = Type::float($this->dataset[$name]);
-                    break;
-                case 'bool':
-                    $this->dataset[$name] = Type::bool($this->dataset[$name]);
-                    break;
-                case 'array':
-                    $this->dataset[$name] = Type::array($this->dataset[$name]);
-                    break;
-                default:
-                    $this->dataset[$name] = Type::string($this->dataset[$name]);
-                    break;
-            }
-
-            // 保存
-            $result[$name] = $this->dataset[$name];
         }
-
         // 返回结果
         return $result;
     }
+
+    /**
+     * 检查单个
+     */
+    public function value(string $name = null) : mixed
+    {
+        // 获取数据
+        $name = $name ?? $this->current;
+        $item = $this->bindings[$name];
+
+        // 上下文
+        $context = ['name' => $item['alias']];
+
+        // 默认值
+        if (!isset($this->dataset[$name]) && array_key_exists('default', $item)) {
+            $this->dataset[$name] = is_callable($item['default']) ? $item['default']($this->dataset) : $item['default'];
+        }
+        // 必填
+        if (!isset($this->dataset[$name]) && !empty($item['require'])) {
+            throw new Exception($this->getMessage('require', $context));
+        }
+        // 不是必填、也没默认值、而且用户还没提供
+        if (!isset($this->dataset[$name])) {
+            return null;
+        }
+
+        // 过滤
+        if (isset($item['rule']['filter'])) {
+            foreach ($item['rule']['filter'] as $token => $filter) {
+                $bool = filter_var($this->dataset[$name], $filter[0], $filter[1]);
+                if (false === $bool) {
+                    throw new Exception($this->getMessage($token, $context + $filter[2]));
+                }
+            }
+        }
+        // 正则
+        if (isset($item['rule']['regex'])) {
+            foreach ($item['rule']['regex'] as $token => $regex) {
+                $bool = 1 === preg_match($regex[0], (string) $this->dataset[$name]);
+                if (false === $bool) {
+                    throw new Exception($this->getMessage($token, $context + $regex[1]));
+                }
+            }
+        }
+        // 回调
+        if (isset($item['rule']['call'])) {
+            foreach ($item['rule']['call'] as $token => $callback) {
+                $bool = $callback[0]($this->dataset[$name], $this->dataset);
+                if (false === $bool) {
+                    throw new Exception($this->getMessage($token, $context + $callback[1]), 0, $item);
+                }
+            }
+        }
+
+        // 返回数据
+        return Type::transform($this->dataset[$name], $item['type']);
+    }
+
 
 
 
@@ -158,7 +166,7 @@ class Validate
      */
     public function string(string $name, string $alias = null) : static
     {
-        return $this->bind($name, 'string', $alias);
+        return $this->bind($name, 'string', $alias ?? $name);
     }
 
     /**
@@ -166,7 +174,7 @@ class Validate
      */
     public function int(string $name, string $alias = null) : static
     {
-        return $this->bind($name, 'int', $alias);
+        return $this->bind($name, 'int', $alias ?? $name);
     }
 
     /**
@@ -174,7 +182,7 @@ class Validate
      */
     public function float(string $name, string $alias = null) : static
     {
-        return $this->bind($name, 'float', $alias);
+        return $this->bind($name, 'float', $alias ?? $name);
     }
 
     /**
@@ -182,7 +190,7 @@ class Validate
      */
     public function number(string $name, string $alias = null) : static
     {
-        return $this->bind($name, 'number', $alias);
+        return $this->bind($name, 'number', $alias ?? $name);
     }
 
     /**
@@ -190,7 +198,7 @@ class Validate
      */
     public function bool(string $name, string $alias = null) : static
     {
-        return $this->bind($name, 'bool', $alias);
+        return $this->bind($name, 'bool', $alias ?? $name);
     }
 
     /**
@@ -198,7 +206,7 @@ class Validate
      */
     public function array(string $name, string $alias = null) : static
     {
-        return $this->bind($name, 'array', $alias);
+        return $this->bind($name, 'array', $alias ?? $name);
     }
 
 
@@ -253,6 +261,16 @@ class Validate
         return $this;
     }
 
+    /**
+     * 仅校验，不保存
+     */
+    public function unset(bool $bool = true) : static
+    {
+        $this->bindings[$this->current]['unset'] = $bool;
+
+        return $this;
+    }
+
 
 
 
@@ -263,7 +281,8 @@ class Validate
     public function regex(string $pattern, string $token = null, array $context = [], string $message = null) : static
     {
         if (is_null($token)) {
-            $token = 'regex' . count($this->bindings[$this->current]['rule']['regex'] ?? []);
+            $this->dashboard[__FUNCTION__] = $this->dashboard[__FUNCTION__] ?? 0;
+            $token = __FUNCTION__ . $this->dashboard[__FUNCTION__]++;
         }
 
         if (!is_null($message)) {
@@ -281,7 +300,8 @@ class Validate
     public function filter(int $type, int|array|callable $options = 0, string $token = null, array $context = [], string $message = null) : static
     {
         if (is_null($token)) {
-            $token = 'filter' . count($this->bindings[$this->current]['rule']['filter'] ?? []);
+            $this->dashboard[__FUNCTION__] = $this->dashboard[__FUNCTION__] ?? 0;
+            $token = __FUNCTION__ . $this->dashboard[__FUNCTION__]++;
         }
 
         if (!is_null($message)) {
@@ -299,7 +319,8 @@ class Validate
     public function call(callable $callback, string $token = null, array $context = [], string $message = null) : static
     {
         if (is_null($token)) {
-            $token = 'call' . count($this->bindings[$this->current]['rule']['call'] ?? []);
+            $this->dashboard[__FUNCTION__] = $this->dashboard[__FUNCTION__] ?? 0;
+            $token = __FUNCTION__ . $this->dashboard[__FUNCTION__]++;
         }
 
         if (!is_null($message)) {
@@ -334,10 +355,9 @@ class Validate
      */
     public function min(int|float $num) : static
     {
-        $type = $this->getType();
-        return $this->call(function($value) use($num, $type){
-            return $type == 'string' ? strlen($value) >= $num : $value >= $num;
-        }, __FUNCTION__, ['rule' => $num, 'unit' => $type == 'string' ? '长度' : '大小']);
+        return $this->call(function($value) use($num){
+            return $value >= $num;
+        }, __FUNCTION__, ['rule' => $num]);
     }
 
     /**
@@ -345,10 +365,9 @@ class Validate
      */
     public function max(int|float $num) : static
     {
-        $type = $this->getType();
-        return $this->call(function($value) use($num, $type){
-            return $type == 'string' ? strlen($value) <= $num : $value <= $num;
-        }, __FUNCTION__, ['rule' => $num, 'unit' => $type == 'string' ? '长度' : '大小']);
+        return $this->call(function($value) use($num){
+            return $value <= $num;
+        }, __FUNCTION__, ['rule' => $num]);
     }
 
     /**
@@ -364,9 +383,21 @@ class Validate
     /**
      * 规则 - 长度范围
      */
-    public function length(int $min, int $max) : static
+    public function length(int $min = null, int $max = null) : static
     {
-        return $this->min($min)->max($max);
+        if (!is_null($min)) {
+            $this->call(function($value) use($min){
+                return strlen($value) >= $min;
+            }, 'length_min', ['rule' => $min]);
+        }
+
+        if (!is_null($max)) {
+            $this->call(function($value) use($max){
+                return strlen($value) <= $max;
+            }, 'length_max', ['rule' => $max]);
+        }
+
+        return $this;
     }
 
 
@@ -396,6 +427,16 @@ class Validate
             $info = date_parse_from_format($rule, $value);
             return 0 == $info['warning_count'] && 0 == $info['error_count'];
         }, __FUNCTION__, ['rule' => $rule]);
+    }
+
+    /**
+     * 规则 - 格式 - 纯数字
+     */
+    public function digit() : static
+    {
+        return $this->call(function($value){
+            return ctype_digit((string) $value);
+        }, __FUNCTION__);
     }
 
     /**

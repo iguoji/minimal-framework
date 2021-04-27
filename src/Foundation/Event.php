@@ -5,7 +5,6 @@ namespace Minimal\Foundation;
 
 use Closure;
 use Throwable;
-use RuntimeException;
 use Minimal\Application;
 use Minimal\Contracts\Listener;
 
@@ -36,7 +35,7 @@ class Event
             $class = $name;
             $listener = $this->app->get($class);
             if (!$listener instanceof Listener) {
-                throw new RuntimeException(sprintf('listener "%s" must implements "%s"', $class, Listener::class));
+                throw new Exception(sprintf('listener "%s" must implements "%s"', $class, Listener::class));
             }
 
             foreach ($listener->events() as $key => $value) {
