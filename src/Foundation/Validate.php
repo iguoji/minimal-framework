@@ -31,6 +31,10 @@ class Validate
     protected string $defaultMessage = '很抱歉、:name不正确！';
     protected array $messages = [
         'require'       =>  '很抱歉、:name必须提供！',
+        'confirm'       =>  '很抱歉、:name必须和:field保持一致！',
+        'with'          =>  '很抱歉、当:field存在时:name也必须提供！',
+        'without'       =>  '很抱歉、:name或:field至少需要提供一个！',
+
         'in'            =>  '很抱歉、:name只能在[:rule]范围内！',
         'min'           =>  '很抱歉、:name的大小不能小于:rule！',
         'max'           =>  '很抱歉、:name的大小不能超过:rule！',
@@ -99,10 +103,41 @@ class Validate
         if (!isset($this->dataset[$name]) && array_key_exists('default', $item)) {
             $this->dataset[$name] = is_callable($item['default']) ? $item['default']($this->dataset) : $item['default'];
         }
+
+        // 字段比较
+        if (isset($item['confirm'])) {
+            $value = $this->dataset[$name] ?? null;
+            foreach ($item['confirm'] as $field) {
+                if (!isset($this->dataset[$field]) || $value !== $this->dataset[$field]) {
+                    $context['field'] = $field;
+                    throw new Exception($this->getMessage('confirm', $context));
+                }
+            }
+        }
+
+        // 字段宿主在，我必在
+        if (isset($item['with'])) {
+            $values = array_filter($this->dataset, fn($v, $k) => in_array($k, $item['with']), ARRAY_FILTER_USE_BOTH);
+            if (empty($values) || count($item['with']) != count($values)) {
+                $context['field'] = $item['with'];
+                throw new Exception($this->getMessage('with', $context));
+            }
+        }
+
+        // 字段多选一
+        if (isset($item['without'])) {
+            $values = array_filter($this->dataset, fn($v, $k) => in_array($k, $item['without']), ARRAY_FILTER_USE_BOTH);
+            if (empty($values) && !isset($this->dataset[$name])) {
+                $context['field'] = $item['without'];
+                throw new Exception($this->getMessage('without', $context));
+            }
+        }
+
         // 必填
         if (!isset($this->dataset[$name]) && !empty($item['require'])) {
             throw new Exception($this->getMessage('require', $context));
         }
+
         // 不是必填、也没默认值、而且用户还没提供
         if (!isset($this->dataset[$name])) {
             return null;
@@ -247,6 +282,26 @@ class Validate
     public function require(bool $bool = true) : static
     {
         $this->bindings[$this->current]['require'] = $bool;
+
+        return $this;
+    }
+
+    /**
+     * 必填 - 多个字段中必须有一个存在
+     */
+    public function requireWithout(string ...$fields) : static
+    {
+        $this->bindings[$this->current]['without'] = $fields;
+
+        return $this;
+    }
+
+    /**
+     * 必填 - 当指定的字段存在时，必填
+     */
+    public function requireWith(string ...$fields) : static
+    {
+        $this->bindings[$this->current]['with'] = $fields;
 
         return $this;
     }
@@ -538,24 +593,13 @@ class Validate
      */
 
     /**
-     * 规则 - 比较 - 和另一个字段相同
+     * 规则 - 比较 - 和别的字段一致
      */
-    public function confirm(string $field) : static
+    public function confirm(string ...$fields) : static
     {
-        return $this->call(function($value, $values) use($field){
-            return $value === $values[$field];
-        }, __FUNCTION__);
-    }
+        $this->bindings[$this->current]['confirm'] = $fields;
 
-    /**
-     * 规则 - 比较 - 两个字段中必须有一个存在
-     */
-    public function without(string $field) : static
-    {
-        // 等待处理：
-        return $this->call(function($value, $values) use($field){
-            return true;
-        }, __FUNCTION__);
+        return $this;
     }
 
 
@@ -578,6 +622,14 @@ class Validate
     {
         if (is_null($message)) {
             $message = $this->messages[$token] ?? $this->defaultMessage ?? '';
+        }
+
+        if (isset($context['field'])) {
+            if (is_array($context['field'])) {
+                $context['field'] = implode('、', array_map(fn($f) => $this->bindings[$f]['alias'] ?? $f, $context['field']));
+            } else {
+                $context['field'] = $this->bindings[$context['field']]['alias'] ?? $context['field'];
+            }
         }
 
         foreach ($context as $key => $value) {
