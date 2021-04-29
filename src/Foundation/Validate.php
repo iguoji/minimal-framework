@@ -32,7 +32,7 @@ class Validate
     protected array $messages = [
         'require'       =>  '很抱歉、:name必须提供！',
         'confirm'       =>  '很抱歉、:name必须和:field保持一致！',
-        'with'          =>  '很抱歉、当:field存在时:name也必须提供！',
+        'with'          =>  '很抱歉、当:name存在时:field也必须提供！',
         'without'       =>  '很抱歉、:name或:field至少需要提供一个！',
 
         'in'            =>  '很抱歉、:name只能在[:rule]范围内！',
@@ -116,7 +116,7 @@ class Validate
         }
 
         // 字段宿主在，我必在
-        if (isset($item['with'])) {
+        if (isset($item['with']) && isset($this->dataset[$name])) {
             $values = array_filter($this->dataset, fn($v, $k) => in_array($k, $item['with']), ARRAY_FILTER_USE_BOTH);
             if (empty($values) || count($item['with']) != count($values)) {
                 $context['field'] = $item['with'];
