@@ -23,14 +23,29 @@ class Route
         $array = $app->config->get('route', []);
         foreach ($array as $domain => $group) {
             foreach ($group as $rule => $data) {
-                // method
+                // 请求方法 GET|POST，必须传数组
                 if (!is_array($data[0])) {
                     $data[0] = [$data[0]];
                 }
-                // middlewares
+
+                // 中间件
                 if (2 === count($data)) {
                     array_push($data, []);
                 }
+                if (!is_array($data[2])) {
+                    $data[2] = [$data[2]];
+                }
+                $data[2] = array_map(function($mid) use($app){
+                    if (is_string($mid)) {
+                        $mid = [$mid, 'handle'];
+                    }
+                    if (is_array($mid) && is_string($mid[0])) {
+                        $mid[0] = $app->make($mid[0]);
+                    }
+                    return $mid;
+                }, $data[2]);
+
+                // 保存数据
                 $group[$rule] = $data;
             }
 
