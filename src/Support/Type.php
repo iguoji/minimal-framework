@@ -85,7 +85,7 @@ class Type
      */
     public static function bool(mixed $value) : bool
     {
-        if (in_array(strtolower($value), ['0', 'false'])) {
+        if (is_string($value) && in_array(strtolower($value), ['0', 'false'])) {
             return false;
         } else {
             return (bool) $value;

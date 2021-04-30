@@ -1,4 +1,4 @@
-# 路由
+## 路由
 > /config/route.php
 ```php
 <?php
@@ -10,6 +10,52 @@ return [
         '/debug'   =>  [['GET'],            [\App\Open\Wechat::class, 'index'],    [[\App\Other\Test::class, 'handle']]],
     ],
 ];
+```
+
+## 控制器
+> /app/Admin/Test.php
+
+```php
+<?php
+
+namespace App\Admin;
+
+use Swoole\Http\Request;
+use Swoole\Http\Response;
+
+class Test
+{
+    public function hello(Request $req, Response $res)
+    {
+        return 'world';
+    }
+
+    public function debug($req, $res)
+    {
+        return 'world';
+    }
+}
+```
+
+## 中间件
+> /app/Middleware/Token.php
+
+```php
+<?php
+
+namespace App\Admin;
+
+use Closure;
+use Swoole\Http\Request;
+use Minimal\Contracts\Middleware
+
+class Test implements Middleware
+{
+    public function handle(Request $req, Closure $next)
+    {
+        return $next($req);
+    }
+}
 ```
 
 # 更新说明

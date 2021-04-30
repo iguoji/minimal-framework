@@ -65,12 +65,9 @@ class OnHttp implements Listener
                 // 回调和中间件
                 [$callable, $middlewares] = $route;
 
-                var_dump($middlewares);
-
                 // 中间件 + 用户操作
                 $callback = array_reduce(array_reverse($middlewares ?? []), function($next, $middleware) use($request, $response){
                     return function() use($middleware, $request, $next) {
-                        var_dump($middleware);
                         return call_user_func_array($middleware, [$request, $next]);
                     };
                 }, fn() => $this->app->call($callable, $request, $response));

@@ -442,13 +442,13 @@ class Validate
     {
         if (!is_null($min)) {
             $this->call(function($value) use($min){
-                return strlen($value) >= $min;
+                return mb_strlen($value) >= $min;
             }, 'length_min', ['rule' => $min]);
         }
 
         if (!is_null($max)) {
             $this->call(function($value) use($max){
-                return strlen($value) <= $max;
+                return mb_strlen($value) <= $max;
             }, 'length_max', ['rule' => $max]);
         }
 
