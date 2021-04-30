@@ -242,13 +242,14 @@ class Database
     /**
      * 字段
      */
-    public function field(StdClass|string ...$columns) : static
+    public function field(StdClass|string|array ...$columns) : static
     {
         $this->bindings['field'] = implode(', ', array_map(function($column){
             if ($column instanceof StdClass) {
                 return $column->sql;
             } else {
-                return $this->backquote($column);
+                $rel = $this->backquote($column);
+                return is_array($rel) ? implode(' AS ', $rel) : $rel;
             }
         }, $columns));
 
@@ -258,7 +259,7 @@ class Database
     /**
      * 表连接
      */
-    public function join(string $table, string $as, string $column, string $value, string $type = 'INNER') : static
+    public function join(string $table, string $as, string $column, string $value, string $type = 'INNER JOIN') : static
     {
         $this->bindings['join'][] = implode(' ', [
             $type,
@@ -611,25 +612,31 @@ class Database
     /**
      * 查询数据 - 所有
      */
-    public function all(StdClass|string ...$columns) : array
+    public function all(StdClass|string|array ...$columns) : array
     {
-        return $this->field(...($columns ?: ['*']))->query($this->buildSelect(), $this->getValues())->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (!isset($this->bindings['field']) || func_num_args()) {
+            $this->field(...($columns ?: ['*']));
+        }
+        return $this->query($this->buildSelect(), $this->getValues())->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
     /**
      * 查询数据 - 所有 - 别名
      */
-    public function select(StdClass|string ...$columns) : array
+    public function select(StdClass|string|array ...$columns) : array
     {
-        return $this->all(...$columns);
+        return func_num_args() ? $this->all(...$columns) : $this->all();
     }
 
     /**
      * 查询数据 - 第一行
      */
-    public function first(StdClass|string ...$columns) : array
+    public function first(StdClass|string|array ...$columns) : array
     {
-        return $this->field(...($columns ?: ['*']))->query($this->buildSelect(), $this->getValues())->fetch(PDO::FETCH_ASSOC) ?: [];
+        if (!isset($this->bindings['field']) || func_num_args()) {
+            $this->field(...($columns ?: ['*']));
+        }
+        return $this->query($this->buildSelect(), $this->getValues())->fetch(PDO::FETCH_ASSOC) ?: [];
     }
 
     /**
@@ -669,7 +676,7 @@ class Database
      */
     public function delete() : int
     {
-        return $this->execute($this->buildDelete($data), $this->getValues());
+        return $this->execute($this->buildDelete(), $this->getValues());
     }
 
     /**
@@ -788,7 +795,7 @@ class Database
      */
     public function mark(string $column, mixed $value = null) : string
     {
-        $mark = ':' . $column;
+        $mark = ':' . preg_replace("/[^\w]/", "_", $column);
 
         if (!isset($this->names[$mark])) {
             $this->names[$mark] = 0;
