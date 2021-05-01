@@ -21,6 +21,7 @@ class Application extends Container
      */
     protected string $basePath;         // 基础目录：  /
     protected string $appPath;          // 应用目录：  /app/
+    protected string $viewPath;         // 模板目录：  /app/View/
     protected string $configPath;       // 配置目录：  /config/
     protected string $routePath;        // 路由目录：  /config/route/
     protected string $runtimePath;      // 运行时目录：/runtime/
@@ -40,6 +41,7 @@ class Application extends Container
         'cache'             =>  \Minimal\Foundation\Cache::class,
         'database'          =>  \Minimal\Foundation\Database::class,
         'queue'             =>  \Minimal\Foundation\Queue::class,
+        'view'              =>  \Minimal\Foundation\View::class,
     ];
 
     /**
@@ -199,6 +201,24 @@ class Application extends Container
     public function useAppPath(string $path) : static
     {
         $this->appPath = $path;
+
+        return $this;
+    }
+
+    /**
+     * 模板目录
+     */
+    public function viewPath(string $path = null) : string
+    {
+        return $this->paths($this->appPath(), $this->viewPath ?? 'View', $path);
+    }
+
+    /**
+     * 更改模板目录
+     */
+    public function useViewPath(string $path) : static
+    {
+        $this->viewPath = $path;
 
         return $this;
     }

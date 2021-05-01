@@ -74,6 +74,9 @@ class OnHttp implements Listener
 
                 // 保存控制器返回的结果
                 $result['data'] = $callback();
+                if (is_object($result['data'])) {
+                    $result = (string) $result['data'];
+                }
             } catch (Throwable $th) {
                 // 保存异常引起的结果
                 $result = array_merge($result, [
@@ -89,8 +92,13 @@ class OnHttp implements Listener
             // 输出结果
             if ($response->isWritable()) {
                 $response->status(200);
-                $response->header('Content-Type', 'application/json;charset=utf-8');
-                $response->end(json_encode($result));
+                if (is_string($result)) {
+                    $response->header('Content-Type', 'text/html;charset=utf-8');
+                    $response->end($result);
+                } else {
+                    $response->header('Content-Type', 'application/json;charset=utf-8');
+                    $response->end(json_encode($result));
+                }
             }
         }) > 0;
     }
