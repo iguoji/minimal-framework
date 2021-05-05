@@ -77,7 +77,6 @@ class Event
     public function trigger(string $name, array $arguments = []) : bool
     {
         try {
-            $this->app->log->debug($name);
             $events = $this->bindings[$name] ?? [];
             foreach ($events as $key => $array) {
                 $bool = $this->app->call($array['callable'], $name, $arguments);

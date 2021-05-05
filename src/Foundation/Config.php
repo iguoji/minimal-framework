@@ -48,7 +48,7 @@ class Config
      */
     public function get(string $key, mixed $default = null) : mixed
     {
-        return Arr::get($this->dataset, $key, $default);
+        return Arr::get($this->dataset, $this->parseKey($key), $default);
     }
 
     /**
@@ -56,7 +56,7 @@ class Config
      */
     public function has(string $key) : bool
     {
-        return Arr::has($this->dataset, $key);
+        return Arr::has($this->dataset, $this->parseKey($key));
     }
 
     /**
@@ -64,6 +64,14 @@ class Config
      */
     public function set(string $key, mixed $value) : mixed
     {
-        return Arr::set($this->dataset, $key, $value);
+        return Arr::set($this->dataset, $this->parseKey($key), $value);
+    }
+
+    /**
+     * 解析Key
+     */
+    public function parseKey(string $key) : string
+    {
+        return $key;
     }
 }

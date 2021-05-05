@@ -11,4 +11,9 @@ class Db extends Facade
     {
         return 'database';
     }
+
+    protected static function isShare() : bool
+    {
+        return true;
+    }
 }

@@ -39,9 +39,10 @@ class Application extends Container
         'server'            =>  \Minimal\Foundation\Server::class,
         'route'             =>  \Minimal\Foundation\Route::class,
         'cache'             =>  \Minimal\Foundation\Cache::class,
-        'database'          =>  \Minimal\Foundation\Database::class,
+        // 'database'          =>  \Minimal\Database\Manager::class,    // 在事件里加载
         'queue'             =>  \Minimal\Foundation\Queue::class,
         'view'              =>  \Minimal\Foundation\View::class,
+        'context'           =>  \Minimal\Foundation\Context::class,
     ];
 
     /**
@@ -53,6 +54,8 @@ class Application extends Container
         \Minimal\Listeners\Application\OnRestart::class,
         \Minimal\Listeners\Application\OnStatus::class,
         \Minimal\Listeners\Application\OnStop::class,
+
+        \Minimal\Listeners\Database\OnInit::class,
     ];
 
     /**

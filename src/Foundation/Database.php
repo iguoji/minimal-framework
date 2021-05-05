@@ -81,6 +81,7 @@ class Database
     public function __construct(protected Application $app)
     {
         // 读取配置
+        $this->token = 'd'.mt_rand(1000, 9999);
         $this->config = $app->config->get('db', []);
     }
 
@@ -91,13 +92,14 @@ class Database
     /**
      * 连接驱动
      */
-    public function connect(int $recount = 1) : static
+    public function connect(int $recount = 1) : PDO
     {
         try {
-            $this->handle = new PDO($this->getDsn(), $this->config['username'], $this->config['password'], $this->getOptions());
+            $handle = new PDO($this->getDsn(), $this->config['username'], $this->config['password'], $this->getOptions());
             foreach ($this->getAttributes() as $key => $value) {
-                $this->handle->setAttribute($key, $value);
+                $handle->setAttribute($key, $value);
             }
+            $handle->token = 'p'.mt_rand(1000, 9999);
         } catch (PDOException $th) {
             $this->app->log->error($th->getMessage(), [
                 'File'  =>  $th->getFile(),
@@ -107,14 +109,33 @@ class Database
                 return $this->connect($recount - 1);
             }
         }
-        return $this;
+        // $that = $this;
+        // Swoole\Coroutine::defer(function()use($that){
+        //     $that->release();
+        // });
+        return $handle;
+    }
+
+    /**
+     * 当前连接
+     */
+    public function connection() : PDO
+    {
+        if ($this->app->context->has('database:handle')) {
+            return $this->app->context->get('database:handle');
+        }
+
+        $this->app->context->set('database:handle', $handle = $this->connect());
+        return $handle;
     }
 
     /**
      * 释放驱动
      */
     public function release() : void
-    {}
+    {
+        unset($this->handle);
+    }
 
     /**
      * 获取DSN
@@ -159,10 +180,18 @@ class Database
      */
     public function beginTransaction() : bool
     {
-        if ($this->inTransaction()) {
-            return true;
+        $level = $this->app->context->inc('database:transaction:level');
+        $this->app->log->info(sprintf('[%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, __FUNCTION__, str_repeat('1', 30)));
+        if (1 === (int) $level) {
+            $this->app->log->info(sprintf('[%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, __FUNCTION__, str_repeat('2', 30)));
+            $bool = $this->__call('beginTransaction', []);
+            $this->app->log->info(sprintf('[%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, __FUNCTION__, str_repeat('3', 30)));
+            return $bool;
         }
-        return $this->__call('beginTransaction', []);
+        $this->app->log->info(sprintf('[%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, __FUNCTION__, str_repeat('4', 30)));
+
+        $this->__call('exec', ['SAVEPOINT TRANS' . $level]);
+        return true;
     }
 
     /**
@@ -170,9 +199,12 @@ class Database
      */
     public function commit() : bool
     {
-        if ($this->inTransaction()) {
+        $level = $this->app->context->dec('database:transaction:level');
+        $this->app->log->info(sprintf('[%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, __FUNCTION__, str_repeat('5', 30)));
+        if (0 === (int) $level) {
             return $this->__call('commit', []);
         }
+
         return true;
     }
 
@@ -181,10 +213,18 @@ class Database
      */
     public function rollBack() : bool
     {
-        if ($this->inTransaction()) {
-            return $this->__call('rollBack', []);
+        $level = $this->app->context->get('database:transaction:level');
+        $this->app->log->info(sprintf('[%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, __FUNCTION__, str_repeat('6', 30)));
+        if (1 === (int) $level) {
+            $bool = $this->__call('rollBack', []);
+        } else {
+            $this->__call('exec', ['ROLLBACK TO SAVEPOINT TRANS' . $level]);
         }
-        return true;
+
+        $level = max(0, $level - 1);
+        $this->app->context->set('database:transaction:level', $level);
+
+        return isset($bool) ? $bool : true;
     }
 
     /**
@@ -192,7 +232,8 @@ class Database
      */
     public function inTransaction() : bool
     {
-        return $this->__call('inTransaction', []);
+        return $this->app->context->has('database:transaction:level')
+            && $this->app->context->get('database:transaction:level') >= 1;
     }
 
 
@@ -884,14 +925,19 @@ class Database
      */
     public function __call(string $method, array $arguments)
     {
+        $this->app->log->info(sprintf('[%s] [%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, __FUNCTION__, '', str_repeat('a', 30)));
         // 连接驱动
-        if (!isset($this->handle)) {
-            $this->connect();
-        }
+        $this->handle = $this->connection();
+        // if (!isset($this->handle)) {
+        //     $this->app->log->info('[' . \Swoole\Coroutine::getuid() . '] ' . $method . str_repeat('b', 30));
+        //     $this->connect();
+        //     $this->app->log->info('[' . \Swoole\Coroutine::getuid() . '] ' . $method . str_repeat('c', 30));
+        // }
 
         // 尝试三次
         for ($i = 0;$i < 3;$i++) {
             try {
+                $this->app->log->info(sprintf('[%s] [%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, $method, $this->handle->token, str_repeat('d', 30)));
                 // 调用方法
                 $result = $this->handle->$method(...$arguments);
 
@@ -909,21 +955,27 @@ class Database
                         throw new PDOException('database PDOStatement execute fail');
                     }
                 }
-
+                $this->app->log->info(sprintf('[%s] [%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, $method, $this->handle->token, str_repeat('e', 30)));
                 // 执行成功
                 break;
             } catch (Throwable $ex) {
+                $this->app->log->info(sprintf('[%s] [%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, $method, $this->handle->token, str_repeat('f', 30)));
                 // 错误重连
                 if (
                     in_array($this->handle->errorInfo()[1], [2002, 2006, 2013]) ||
                     (isset($result) && !is_null($result) && in_array($result->errorInfo()[1], [2002, 2006, 2013]))
                 ) {
+                    $this->app->log->info(sprintf('[%s] [%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, $method, $this->handle->token, str_repeat('g', 30)));
                     $this->app->log->info('数据库重连：');
                     $this->connect();
+                    $this->app->log->info(sprintf('[%s] [%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, $method, $this->handle->token, str_repeat('h', 30)));
                     continue;
                 }
                 // 记录错误
                 $this->app->log->error($ex->getMessage(), [
+                    'coroutine' =>  \Swoole\Coroutine::getuid(),
+                    'token'     =>  $this->token,
+                    'handle'     =>  $this->handle->token,
                     'code'      =>  $ex->getCode(),
                     'error1'    =>  $this->handle->errorInfo(),
                     'error2'    =>  isset($result) && !is_null($result) ? $result->errorInfo() : [],
@@ -935,8 +987,12 @@ class Database
             }
         }
 
+        $this->app->log->info(sprintf('[%s] [%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, $method, $this->handle->token, str_repeat('i', 30)));
+
         // 清空参数
         $this->reset();
+
+        $this->app->log->info(sprintf('[%s] [%s] [%s] [%s] %s', \Swoole\Coroutine::getuid(), $this->token, $method, $this->handle->token, str_repeat('j', 30)));
 
         // 返回结果
         return $result;

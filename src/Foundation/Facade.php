@@ -28,7 +28,7 @@ abstract class Facade
     {
         // 获取实例
         $class = static::getClass();
-        $instance = self::$container->get($class);
+        $instance = static::isShare() ? self::$container->get($class) : self::$container->make($class);
         // 获取存在的属性
         if (str_starts_with($method, 'get') && strlen($method) > 3 && !method_exists($instance, $method)) {
             $property = strtolower(substr($method, 3));
@@ -45,6 +45,14 @@ abstract class Facade
         }
         // 返回结果
         return call_user_func([$instance, $method], ...$arguments);
+    }
+
+    /**
+     * 是否共享复用
+     */
+    protected static function isShare() : bool
+    {
+        return true;
     }
 
     /**

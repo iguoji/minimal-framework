@@ -2,12 +2,13 @@
     "name": "iguoji/minimal-framework",
     "type": "library",
     "description": "a minimalism framework",
-    "keywords": ["framework", "php"],
+    "keywords": ["framework", "php", "swoole"],
     "homepage": "https://github.com/iguoji/minimal-framework",
     "license": "Apache-2.0",
     "require": {
         "php": "^8.0",
-        "ext-mbstring": "*"
+        "ext-mbstring": "*",
+        "iguoji/minimal-database": "dev-master"
     },
     "autoload": {
         "psr-4": {
