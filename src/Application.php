@@ -38,7 +38,7 @@ class Application extends Container
         'log'               =>  \Minimal\Foundation\Log::class,
         'server'            =>  \Minimal\Foundation\Server::class,
         'route'             =>  \Minimal\Foundation\Route::class,
-        'cache'             =>  \Minimal\Foundation\Cache::class,
+        // 'cache'             =>  \Minimal\Cache\Manager::class,       // 在事件里加载
         // 'database'          =>  \Minimal\Database\Manager::class,    // 在事件里加载
         'queue'             =>  \Minimal\Foundation\Queue::class,
         'view'              =>  \Minimal\Foundation\View::class,
@@ -55,6 +55,7 @@ class Application extends Container
         \Minimal\Listeners\Application\OnStatus::class,
         \Minimal\Listeners\Application\OnStop::class,
 
+        \Minimal\Listeners\Cache\OnInit::class,
         \Minimal\Listeners\Database\OnInit::class,
     ];
 
