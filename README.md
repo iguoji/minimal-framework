@@ -58,6 +58,12 @@ class Test implements Middleware
 }
 ```
 
+## 页面模板
+> /app/View/aaa/bbb/index.html
+
+来源于：https://github.com/top-think/think-template
+可参考：https://www.kancloud.cn/manual/think-template/1286412
+
 # 更新说明
 
 + **[2021-05-05]** 数据库功能已改好，为了简约强行在一个类里实现所有功能还是不够明知，所以将数据库分离出去单独开发成一个包，同时决定了，先以`Swoole`为基础来做，等后续再做成开放式的。
