@@ -62,6 +62,11 @@ class Route
     public function dispatch(string $domain, string $method, string $uri) : mixed
     {
         $group = $this->bindings[$domain] ?? $this->bindings['*'] ?? [];
+
+        if (str_ends_with($uri, '.html')) {
+            $uri = substr($uri, 0, -5);
+        }
+
         if (isset($group[$uri]) && in_array($method, $group[$uri][0])) {
             return array_slice($group[$uri], 1);
         }
