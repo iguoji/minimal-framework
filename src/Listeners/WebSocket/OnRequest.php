@@ -34,9 +34,9 @@ class OnRequest implements Listener
     public function handle(string $event, array $arguments = []) : bool
     {
         // Swoole\Http\Request
-        $request = $arguments[0];
+        $request = $this->app->request->setHandle($arguments[0]);
         // Swoole\Http\Response
-        $response = $arguments[1];
+        $response = $this->app->response->setHandle($arguments[1]);
 
         // 前置事件
         $bool = $this->app->event->trigger('Server:OnHttpBefore', [$request, $response]);

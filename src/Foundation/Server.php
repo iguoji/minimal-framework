@@ -213,7 +213,7 @@ class Server implements ServerInterface
     public function getDefaultConfig() : array
     {
         return [
-            'class'                     =>  \Swoole\WebSocket\Server::class,
+            'class'                     =>  \Swoole\Http\Server::class,
             'constructor'               =>  [
                 'host'                  =>  '0.0.0.0',
                 'port'                  =>  8080,

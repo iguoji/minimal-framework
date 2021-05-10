@@ -4,8 +4,7 @@ declare(strict_types=1);
 namespace Minimal\Contracts;
 
 use Closure;
-use Swoole\Http\Request;
-use Swoole\Http\Response;
+use Minimal\Foundation\Request;
 
 /**
  * 中间件接口

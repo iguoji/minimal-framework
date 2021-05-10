@@ -39,7 +39,7 @@ class OnHttpBefore implements Listener
         $response = $arguments[1];
 
         // Favicon
-        if (($request->server['request_uri'] ?? $request->server['path_info']) == '/favicon.ico') {
+        if (($request->server('request_uri') ?? $request->server('path_info')) == '/favicon.ico') {
             $response->end();
             return false;
         }

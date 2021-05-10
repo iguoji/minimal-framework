@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Minimal\Listeners\Http;
 
 use Throwable;
+use Swoole\Coroutine;
 use Minimal\Application;
 use Minimal\Contracts\Listener;
 use Minimal\Foundation\Exception;
@@ -40,7 +41,7 @@ class OnHttp implements Listener
         $response = $arguments[1];
 
         // 协程处理
-        return \Swoole\Coroutine::create(function() use($request, $response){
+        return Coroutine::create(function() use($request, $response){
             // 最终结果
             $result = [
                 'code'      =>  200,
@@ -50,17 +51,13 @@ class OnHttp implements Listener
             try {
                 // 匹配路由
                 $route = $this->app->route->dispatch(
-                    $request->header['host']
-                    , $request->server['request_method']
-                    , $request->server['request_uri'] ?? $request->server['path_info']
+                    $request->header('host'),
+                    $request->server('request_method'),
+                    $request->server('request_uri') ?? $request->server('path_info')
                 );
                 if (empty($route)) {
                     throw new Exception('Sorry. api not found');
                 }
-
-                // 更新容器中的请求和响应对象
-                $this->app->set('request', $request);
-                $this->app->set('response', $response);
 
                 // 回调和中间件
                 [$callable, $middlewares] = $route;
@@ -100,6 +97,9 @@ class OnHttp implements Listener
                     $response->end(json_encode($result));
                 }
             }
+
+            // 释放资源
+            $this->app->context->flush();
         }) > 0;
     }
 }
