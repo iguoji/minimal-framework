@@ -38,6 +38,29 @@ class OnHttpAfter implements Listener
         // Swoole\Http\Response
         $response = $arguments[1];
 
+        // 有效的响应
+        if ($response->isWritable()) {
+            // Session
+            $sessionConfig = $this->app->session->getConfig();
+            $response->cookie(
+                $sessionConfig['name'],
+                $this->app->session->getSessionId(),
+                time() + $sessionConfig['expire'],
+                $sessionConfig['path'],
+                $sessionConfig['domain'],
+                $sessionConfig['secure'],
+                $sessionConfig['httponly'],
+                $sessionConfig['samesite'],
+                $sessionConfig['priority'],
+            );
+
+            // 结束响应
+            $response->end($response->getContent());
+        }
+
+        // 释放资源
+        $this->app->context->flush();
+
         // 返回结果
         return true;
     }

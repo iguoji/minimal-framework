@@ -35,6 +35,22 @@ class Response
     }
 
     /**
+     * 响应内容
+     */
+    public function content(string $data) : void
+    {
+        $this->app->context->set('response:content', $data);
+    }
+
+    /**
+     * 获取响应内容
+     */
+    public function getContent() : string
+    {
+        return $this->app->context->get('response:content', '');
+    }
+
+    /**
      * 未知函数
      */
     public function __call(string $method, array $arguments)

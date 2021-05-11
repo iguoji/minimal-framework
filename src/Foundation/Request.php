@@ -67,7 +67,7 @@ class Request
      */
     public function header(string $name = null) : mixed
     {
-        return isset($name) ? ($this->getHandle()->header[$name] ?? null) : $this->getHandle()->header;
+        return isset($name) ? ($this->getHandle()->header[$name] ?? null) : ($this->getHandle()->header ?? []);
     }
 
     /**
@@ -75,7 +75,15 @@ class Request
      */
     public function server(string $name = null) : mixed
     {
-        return isset($name) ? ($this->getHandle()->server[$name] ?? null) : $this->getHandle()->server;
+        return isset($name) ? ($this->getHandle()->server[$name] ?? null) : ($this->getHandle()->server ?? []);
+    }
+
+    /**
+     * 获取会话信息
+     */
+    public function cookie(string $name = null) : mixed
+    {
+        return isset($name) ? ($this->getHandle()->cookie[$name] ?? null) : ($this->getHandle()->cookie ?? []);
     }
 
     /**

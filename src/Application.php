@@ -38,6 +38,7 @@ class Application extends Container
         'log'               =>  \Minimal\Foundation\Log::class,
         'server'            =>  \Minimal\Foundation\Server::class,
         'route'             =>  \Minimal\Foundation\Route::class,
+        'session'           =>  \Minimal\Foundation\Session::class,
         'request'           =>  \Minimal\Foundation\Request::class,
         'response'          =>  \Minimal\Foundation\Response::class,
         // 'cache'             =>  \Minimal\Cache\Manager::class,       // 在事件里加载

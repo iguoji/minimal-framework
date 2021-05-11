@@ -38,19 +38,35 @@ class OnRequest implements Listener
         // Swoole\Http\Response
         $response = $this->app->response->setHandle($arguments[1]);
 
-        // 前置事件
-        $bool = $this->app->event->trigger('Server:OnHttpBefore', [$request, $response]);
-        if (false === $bool) {
-            return false;
-        }
+        // 协程处理
+        return Coroutine::create(function() use($request, $response){
+            try {
+                // 前置事件
+                $bool = $this->app->event->trigger('Server:OnHttpBefore', [$request, $response]);
+                if (false === $bool) {
+                    return false;
+                }
 
-        // 请求处理
-        $bool = $this->app->event->trigger('Server:OnHttp', [$request, $response]);
-        if (false === $bool) {
-            return false;
-        }
+                // 请求处理
+                $this->app->event->trigger('Server:OnHttp', [$request, $response]);
 
-        // 后置事件
-        return $this->app->event->trigger('Server:OnHttpAfter', [$request, $response]);
+                // 后置事件
+                $this->app->event->trigger('Server:OnHttpAfter', [$request, $response]);
+            } catch (Throwable $th) {
+                // 结束响应
+                if ($response->isWritable()) {
+                    $response->end();
+                }
+                // 保存日志
+                $this->app->log->error($th->getMessage(), [
+                    'code'      =>  $th->getCode() ?: 500,
+                    'message'   =>  $th->getMessage(),
+                    'file'      =>  $th->getFile(),
+                    'line'      =>  $th->getLine(),
+                    'data'      =>  method_exists($th, 'getData') ? $th->getData() : [],
+                    'trace'     =>  $th->getTrace(),
+                ]);
+            }
+        }) > 0;
     }
 }

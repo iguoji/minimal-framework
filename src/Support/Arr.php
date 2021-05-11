@@ -9,6 +9,23 @@ namespace Minimal\Support;
 class Arr
 {
     /**
+     * 数组深度
+     */
+    public static function depth(array $array, string|int $subKey = null) : int
+    {
+        $index = 0;
+        foreach ($array as $value) {
+            if (!is_null($subKey)) {
+                $value = $value[$subKey] ?? [];
+            }
+            if (is_array($value) && !empty($value)) {
+                $index = max($index, static::depth($value) + 1);
+            }
+        }
+        return $index;
+    }
+
+    /**
      * 遍历数组
      */
     public static function each(callable $callback, array $array) : array
