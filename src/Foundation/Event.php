@@ -25,12 +25,12 @@ class Event
     {}
 
     /**
-     * 批量绑定
+     * 绑定事件
      */
     public function bind(string $name, Closure|array|string $class = null) : void
     {
         if ($class instanceof Closure) {
-            $this->app->event->on($name, $class);
+            $this->on($name, $class);
         } else {
             $class = $name;
             $listener = $this->app->get($class);

@@ -7,6 +7,8 @@ use Closure;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionFunction;
+use ReflectionFunctionAbstract;
+use Minimal\Support\Traits\Alias;
 
 /**
  * 容器类
@@ -14,55 +16,19 @@ use ReflectionFunction;
 class Container
 {
     /**
+     * 引入别名
+     */
+    use Alias;
+
+    /**
      * 对象实例
      */
     protected array $instances = [];
 
     /**
-     * 别名集合
-     */
-    protected array $aliases = [];
-
-    /**
-     * 设置别名
-     */
-    public function setAlias(string $key, string $value) : void
-    {
-        if ($key != $value) {
-            $this->aliases[$key] = $value;
-        }
-    }
-
-    /**
-     * 是否存在指定别名
-     */
-    public function hasAlias(string $key) : bool
-    {
-        return isset($this->aliases[$key]);
-    }
-
-    /**
-     * 获取所有别名
-     */
-    public function getAliases() : array
-    {
-        return $this->aliases;
-    }
-
-    /**
-     * 获取别名
-     */
-    public function getAlias(string $key) : string
-    {
-        return $this->hasAlias($key)
-            ? $this->getAlias($this->aliases[$key])
-            : $key;
-    }
-
-    /**
      * 获取实例
      */
-    public function get($id) : mixed
+    public function get(string $id) : mixed
     {
         $id = $this->getAlias($id);
         if (!$this->has($id)) {
@@ -86,7 +52,7 @@ class Container
     /**
      * 实例是否存在
      */
-    public function has($id) : bool
+    public function has(string $id) : bool
     {
         $id = $this->getAlias($id);
         return isset($this->instances[$id]);
@@ -107,12 +73,8 @@ class Container
 
     /**
      * 调用函数
-     * @param $callable className::methodName
-     * @param $callable [className, methodName]
-     * @param $callable [classInstance, methodName]
-     * @param $callable Closure
      */
-    public function call($callable, ...$parameters)
+    public function call(ReflectionFunctionAbstract|Closure|array $callable, ...$parameters)
     {
         // 方法/函数反射对象
         $reflection = $callable instanceof Closure ? new ReflectionFunction($callable) : new ReflectionMethod(...$callable);
@@ -137,7 +99,7 @@ class Container
     /**
      * 获取实例
      */
-    private function newInstance($class, array $parameters = []) : mixed
+    private function newInstance(ReflectionClass|string $class, array $parameters = []) : mixed
     {
         // 反射对象
         $class = is_string($class) ? new ReflectionClass($class) : $class;
@@ -145,30 +107,19 @@ class Container
         $instance = null;
         // 无法构造
         if (!$class->isInstantiable()) {
-            // 寻找子类
-            foreach ($this->instances as $key => $obj) {
-                if (is_subclass_of($obj, $class->getName())) {
-                    $instance = $obj;
-                    break;
-                }
-            }
-            // 没有找到
-            if (is_null($instance)) {
-                throw new Exception("{$class->getName()} cannot instantiate");
-            }
-        } else {
-            // 构造方法
-            $method = $class->getConstructor();
-            // 构造参数
-            if (!is_null($method)) {
-                // 方法参数
-                $methodParameter = $this->getParameters($method);
-                // 合并参数
-                $parameters = array_merge($methodParameter, $parameters);
-            }
-            // 获得实例
-            $instance = $class->newInstanceArgs($parameters);
+            throw new Exception("{$class->getName()} cannot instantiate");
         }
+        // 构造方法
+        $method = $class->getConstructor();
+        // 构造参数
+        if (!is_null($method)) {
+            // 方法参数
+            $methodParameter = $this->getParameters($method);
+            // 合并参数
+            $parameters = array_merge($methodParameter, $parameters);
+        }
+        // 获得实例
+        $instance = $class->newInstanceArgs($parameters);
         // 返回实例
         return $instance;
     }
@@ -176,13 +127,12 @@ class Container
     /**
      * 获取参数
      */
-    private function getParameters($method)
+    private function getParameters(ReflectionFunctionAbstract $method) : array
     {
         // 最终结果
         $result = [];
-        // 得到参数
-        $params = $method->getParameters();
         // 循环参数
+        $params = $method->getParameters();
         foreach ($params as $key => $param) {
             // 参数类型
             $paramType = $param->getType();
@@ -211,7 +161,7 @@ class Container
     /**
      * 快捷属性
      */
-    public function __get($id)
+    public function __get(string $id) : mixed
     {
         return $this->get($id);
     }

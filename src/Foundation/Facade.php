@@ -29,20 +29,6 @@ abstract class Facade
         // 获取实例
         $class = static::getClass();
         $instance = static::isShare() ? self::$container->get($class) : self::$container->make($class);
-        // 获取存在的属性
-        if (str_starts_with($method, 'get') && strlen($method) > 3 && !method_exists($instance, $method)) {
-            $property = strtolower(substr($method, 3));
-            if (property_exists($instance, $property)) {
-                return $instance->$property;
-            }
-        }
-        // 设置存在的属性
-        if (str_starts_with($method, 'set') && strlen($method) > 3 && !method_exists($instance, $method)) {
-            $property = strtolower(substr($method, 3));
-            if (property_exists($instance, $property)) {
-                return $instance->$property = $arguments[0] ?? null;
-            }
-        }
         // 返回结果
         return call_user_func([$instance, $method], ...$arguments);
     }

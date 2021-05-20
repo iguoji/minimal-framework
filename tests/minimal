@@ -17,3 +17,37 @@ $app = new Application(__DIR__);
 
 // 执行应用
 $app->execute($argv);
+return;
+
+
+// 协程测试
+class Container extends \Minimal\Support\Collection
+{}
+$container = new Container();
+$container->set('a', 11);
+var_dump('a', $container->all());
+
+\Swoole\Coroutine::create(function() use($container){
+    $container->set('b', 22);
+    var_dump('b', $container->all());
+    \Swoole\Coroutine::create(function() use($container){
+        $container->set('c', 33);
+        var_dump('c', $container->all());
+        \Swoole\Coroutine::create(function() use($container){
+            $container->set('d', 44);
+            var_dump('d', $container->all());
+            $container->delete('a');
+        });
+    });
+
+    \Swoole\Coroutine::create(function() use($container){
+        $container->set('a', 11111);
+        $container->set('e', 55);
+        var_dump('e', $container->all());
+    });
+
+    var_dump($container->all());
+});
+
+var_dump($container->all());
+

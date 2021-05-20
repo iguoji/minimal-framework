@@ -31,8 +31,7 @@ class Log
      * 构造函数
      */
     public function __construct(protected Application $app)
-    {
-    }
+    {}
 
     /**
      * System is unusable.
@@ -126,6 +125,7 @@ class Log
                 fwrite(STDIN, $message);
             }
 
+
             // 文件输出
             if (true === $this->app->env->get('log.enable', false)) {
                 error_log($message, 3, $this->path(date('Y/m/d') . '.log'));
@@ -143,6 +143,7 @@ class Log
         $path = $this->app->logPath($filename);
 
         if (!is_dir(dirname($path))) {
+            echo $path, PHP_EOL;
             mkdir(dirname($path), 0777, true);
         }
 

@@ -9,19 +9,19 @@ namespace Minimal\Contracts;
 interface Server
 {
     /**
-     * 服务器配置
+     * 设置服务器配置
      */
-    public function setConfig(array $config) : static;
+    public function setConfig(string|int $key, mixed $value) : static;
 
     /**
      * 获取服务器配置
      */
-    public function getConfig() : array;
+    public function getConfig(string $key = null) : mixed;
 
     /**
-     * 切换服务器
+     * 获取服务器默认配置
      */
-    public function use(string $name) : static;
+    public function getDefaultConfig() : array;
 
     /**
      * 启动服务器

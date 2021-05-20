@@ -26,7 +26,6 @@ class OnInit implements Listener
     public function events() : array
     {
         return [
-            'Database:OnInit',
             'Server:OnWorkerStart',
         ];
     }
@@ -36,18 +35,25 @@ class OnInit implements Listener
      */
     public function handle(string $event, array $arguments = []) : bool
     {
-        // 启动数据库
-        if ($event == 'Server:OnWorkerStart') {
-            // Swoole\Server
-            $server = $arguments[0];
-            // int Worker 进程 id（非进程的 PID）
-            $workerId = $arguments[1];
-            // 协程环境
-            Coroutine::create(function() use($server){
-                // 实例化数据库
-                $this->app->set('database', new Database($this->app->config->get('db', []), $server->setting['worker_num'] + $server->setting['task_worker_num']));
-            });
-        }
+        // Swoole\Server
+        $server = $arguments[0];
+        // int Worker 进程 id（非进程的 PID）
+        $workerId = $arguments[1];
+
+        // 协程环境
+        // Coroutine::create(function() use($server){
+            // 数据库配置
+            $config = $this->app->config->get('db', []);
+            // 进程数量
+            $workerNum = $server->setting['worker_num'] + $server->setting['task_worker_num'];
+            // 实例化数据库
+            $db = new Database($config, $workerNum);
+
+            // 保存数据库
+            $this->app->set('database', $db);
+            // 触发事件
+            $this->app->event->trigger('Database:OnInit', [$db, $config, $workerNum]);
+        // });
 
         // 返回结果
         return true;

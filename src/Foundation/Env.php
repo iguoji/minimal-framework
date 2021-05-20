@@ -3,17 +3,20 @@ declare(strict_types=1);
 
 namespace Minimal\Foundation;
 
+use Minimal\Application;
+use Minimal\Support\Collection;
+
 /**
  * 环境变量类
  */
-class Env extends Config
+class Env extends Collection
 {
     /**
-     * 载入数据
+     * 构造函数
      */
-    public function load() : void
+    public function __construct(protected Application $app)
     {
-        $file = $this->app->basePath('.env');
+        $file = $app->basePath('.env');
         if (file_exists($file)) {
             $this->dataset = parse_ini_file($file, true);
         }

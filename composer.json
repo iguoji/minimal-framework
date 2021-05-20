@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.0",
         "ext-mbstring": "*",
+        "iguoji/minimal-support": "dev-master",
         "iguoji/minimal-database": "dev-master",
         "iguoji/minimal-cache": "dev-master",
         "topthink/think-template": "^2.0"

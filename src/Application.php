@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Minimal;
 
+use Minimal\Support\Path;
 use Minimal\Foundation\Facade;
 use Minimal\Foundation\Container;
 
@@ -14,7 +15,7 @@ class Application extends Container
     /**
      * 版本号码
      */
-    const VERSION = '0.1.0';
+    const VERSION = '0.1.1';
 
     /**
      * 目录列表
@@ -36,30 +37,7 @@ class Application extends Container
         'config'            =>  \Minimal\Foundation\Config::class,
         'event'             =>  \Minimal\Foundation\Event::class,
         'log'               =>  \Minimal\Foundation\Log::class,
-        'server'            =>  \Minimal\Foundation\Server::class,
-        'route'             =>  \Minimal\Foundation\Route::class,
-        'session'           =>  \Minimal\Foundation\Session::class,
-        'request'           =>  \Minimal\Foundation\Request::class,
-        'response'          =>  \Minimal\Foundation\Response::class,
-        // 'cache'             =>  \Minimal\Cache\Manager::class,       // 在事件里加载
-        // 'database'          =>  \Minimal\Database\Manager::class,    // 在事件里加载
-        'queue'             =>  \Minimal\Foundation\Queue::class,
-        'view'              =>  \Minimal\Foundation\View::class,
-        'context'           =>  \Minimal\Foundation\Context::class,
-    ];
-
-    /**
-     * 事件集合
-     */
-    protected array $listeners = [
-        \Minimal\Listeners\Application\OnStart::class,
-        \Minimal\Listeners\Application\OnReload::class,
-        \Minimal\Listeners\Application\OnRestart::class,
-        \Minimal\Listeners\Application\OnStatus::class,
-        \Minimal\Listeners\Application\OnStop::class,
-
-        \Minimal\Listeners\Cache\OnInit::class,
-        \Minimal\Listeners\Database\OnInit::class,
+        'server'            =>  \Minimal\Server\Manager::class,
     ];
 
     /**
@@ -67,13 +45,14 @@ class Application extends Container
      */
     public function __construct(string $basePath)
     {
+        // 基础目录
+        $this->useBasePath($basePath);
         // 绑定容器
         $this->set('app', $this);
         $this->set('container', $this);
         // 门面注入
         Facade::setContainer($this);
-        // 基础目录
-        $this->useBasePath($basePath);
+
         // 错误绑定
         $this->bindErrorHandler();
         // 事件绑定
@@ -91,22 +70,10 @@ class Application extends Container
         });
         // 异常程序
         set_exception_handler(function($th){
-            $logger = null;
-            if ($this->app->has('log')) {
-                $logger = $this->app->get('log');
-            }
-            if (is_null($logger)) {
-                echo '[ ' . date('Y-m-d H:i:s') . ' ] ' . __CLASS__ . PHP_EOL;
-                echo 'Messgae::' . $th->getMessage() . PHP_EOL;
-                echo 'File::' . $th->getFile() . PHP_EOL;
-                echo 'Line::' . $th->getLine() . PHP_EOL;
-                echo PHP_EOL;
-            } else {
-                $logger->error($th->getMessage(), [
-                    'File'   =>  $th->getFile(),
-                    'Line'   =>  $th->getLine(),
-                ]);
-            }
+            $this->app->log->error($th->getMessage(), [
+                'File'   =>  $th->getFile(),
+                'Line'   =>  $th->getLine(),
+            ]);
         });
     }
 
@@ -115,8 +82,7 @@ class Application extends Container
      */
     public function bindListeners() : void
     {
-        $userEvents = $this->config->get('listener', []);
-        $listeners = array_merge($this->listeners, $userEvents);
+        $listeners = $this->config->get('listener', []);
         foreach ($listeners as $class) {
             $this->event->bind($class);
         }
@@ -127,55 +93,26 @@ class Application extends Container
      */
     public function execute(array $arguments = []) : void
     {
-        if (count($arguments) < 2) {
+        if (count($arguments) < 3) {
             return;
         }
+
         $script = array_shift($arguments);
+        $class = array_shift($arguments);
+        $method = array_shift($arguments);
+        $test = array_shift($arguments);
 
-        $array = explode(':', array_shift($arguments), 2);
-        if (1 === count($array)) {
-            array_unshift($array, 'Application');
-        }
-        $array = array_map(fn($s) => ucwords($s), $array);
-        if (!str_starts_with($array[1], 'On')) {
-            $array[1] = 'On' . $array[1];
-        }
-        $event = implode(':', $array);
-
-        $parameters = [];
-        foreach ($arguments as $value) {
-            $array = explode('=', $value, 2);
-            if (1 === count($array)) {
-                $array[] = true;
-            }
-            $parameters[ltrim($array[0], '-')] = $array[1];
-        }
-
-        $this->event->trigger($event, $parameters);
+        var_dump(
+            $this->get($class)->$method(...$arguments)
+        );
     }
 
     /**
      * 目录拼接
      */
-    public function paths(string $path, ...$paths) : string
+    public function paths(?string ...$paths) : string
     {
-        if (!str_ends_with($path, DIRECTORY_SEPARATOR)) {
-            $path .= DIRECTORY_SEPARATOR;
-        }
-        foreach ($paths as $key => $p) {
-            if (is_null($p)) {
-                continue;
-            }
-            if (!str_ends_with($path, DIRECTORY_SEPARATOR)) {
-                $path .= DIRECTORY_SEPARATOR;
-            }
-            if (str_starts_with($p, DIRECTORY_SEPARATOR)) {
-                $path = $p;
-            } else {
-                $path .= $p;
-            }
-        }
-        return $path;
+        return DIRECTORY_SEPARATOR . Path::absolute(implode(DIRECTORY_SEPARATOR, $paths));
     }
 
     /**
