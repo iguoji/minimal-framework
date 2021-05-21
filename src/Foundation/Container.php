@@ -28,11 +28,11 @@ class Container
     /**
      * 获取实例
      */
-    public function get(string $id) : mixed
+    public function get(string $id, ...$parameters) : mixed
     {
         $id = $this->getAlias($id);
         if (!$this->has($id)) {
-            $this->instances[$id] = $this->make($id);
+            $this->instances[$id] = $this->make($id, ...$parameters);
         }
         return $this->instances[$id];
     }

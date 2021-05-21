@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Minimal\Server\Listener\Http;
 
 use Throwable;
-use Swoole\Coroutine;
 use Minimal\Application;
 use Minimal\Contracts\Listener;
 use Minimal\Foundation\Exception;
@@ -46,9 +45,11 @@ class OnHttp implements Listener
             if (empty($route)) {
                 throw new Exception('Sorry. api not found');
             }
+            // 保存路由
+            $request->setRoute($route);
             // 执行功能
             $result = $this->app->call($route, $request, $response);
-            if (! $result instanceof \Minimal\Http\Response) {
+            if (!$result instanceof \Minimal\Http\Response) {
                 $response->json($result);
             }
         } catch (Throwable $th) {

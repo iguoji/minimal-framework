@@ -47,6 +47,24 @@ class Request
         return $this->app->context;
     }
 
+    /**
+     * 设置当前路由
+     */
+    public function setRoute(mixed $object) : static
+    {
+        $this->getContext()->set('route', $object);
+
+        return $this;
+    }
+
+    /**
+     * 获取当前路由
+     */
+    public function getRoute() : mixed
+    {
+        return $this->getContext()->get('route');
+    }
+
 
 
 

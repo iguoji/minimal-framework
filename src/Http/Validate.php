@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Minimal\Http;
 
 use Minimal\Support\Type;
+use Minimal\Foundation\Exception;
 
 /**
  * 验证器

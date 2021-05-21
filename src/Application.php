@@ -55,7 +55,7 @@ class Application extends Container
 
         // 错误绑定
         $this->bindErrorHandler();
-        // 事件绑定
+        // 监听器绑定
         $this->bindListeners();
     }
 
@@ -78,7 +78,7 @@ class Application extends Container
     }
 
     /**
-     * 事件绑定
+     * 监听器绑定
      */
     public function bindListeners() : void
     {
@@ -100,7 +100,6 @@ class Application extends Container
         $script = array_shift($arguments);
         $class = array_shift($arguments);
         $method = array_shift($arguments);
-        $test = array_shift($arguments);
 
         var_dump(
             $this->get($class)->$method(...$arguments)

@@ -25,15 +25,15 @@ class Manager extends ManagerInterface
         'session'   =>  \Minimal\Http\Session::class,
         'request'   =>  \Minimal\Http\Request::class,
         'response'  =>  \Minimal\Http\Response::class,
-        'view'      =>  \Minimal\Http\View::class,
+        'view'      =>  \think\Template::class,
     ];
 
     /**
      * 事件集合
      */
     protected array $listeners = [
-        \Minimal\Listeners\Cache\OnInit::class,
-        \Minimal\Listeners\Database\OnInit::class,
+        \Minimal\Server\Listener\Cache::class,
+        \Minimal\Server\Listener\Database::class,
     ];
 
     /**

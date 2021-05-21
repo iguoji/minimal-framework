@@ -62,8 +62,8 @@ class Response
 
         $result = array_merge([
             'code'      =>  $code,
-            'data'      =>  $data,
             'messgae'   =>  $message ?? ($code == 200 ? '恭喜您、操作成功！' : '很抱歉、操作失败！'),
+            'data'      =>  $data,
         ], $context);
         $this->content(json_encode($result));
 
@@ -73,11 +73,48 @@ class Response
     /**
      * 返回Html
      */
-    public function html(mixed $data) : static
+    public function html(array|string $filename = null, array $params = []) : static
     {
-        $this->getHandle()->header('Content-Type', 'text/html;charset=utf-8');
-        $this->content((string) $data);
+        // 模板引擎
+        if (!$this->app->has('view')) {
+            $config = $this->app->config->get('view', []);
+            $config['view_path'] = $this->app->viewPath() . DIRECTORY_SEPARATOR;
+            $config['cache_path'] = $this->app->cachePath('view') . DIRECTORY_SEPARATOR;
+            $this->app->get('view', $config);
+        }
 
+        // 参数整理
+        if (is_array($filename)) {
+            $params = $filename;
+            $filename = null;
+        }
+        if (is_null($filename)) {
+            $route = $this->app->request->getRoute();
+            if (!is_array($route)) {
+                throw new Exception('很抱歉、请提供静态页面路径！');
+            }
+            $filename = strtolower($route[0]::class);
+            $array = explode('\\', $filename);
+            $filename = implode(DIRECTORY_SEPARATOR, array_splice($array, 2));
+        }
+
+        // 最终内容
+        $context = $filename;
+
+        // 按静态页面渲染
+        $filename = $this->app->viewPath($filename . '.html');
+        if (is_file($filename)) {
+            ob_start();
+            ob_implicit_flush(false);
+            $this->app->view->fetch($filename, $params);
+            $context = ob_get_clean();
+        }
+
+        // 设置内容
+        $this->getHandle()->header('Content-Type', 'text/html;charset=utf-8');
+        $this->content((string) $context);
+
+        // 返回结果
         return $this;
     }
 
