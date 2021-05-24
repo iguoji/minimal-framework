@@ -6,6 +6,7 @@ namespace Minimal;
 use Minimal\Support\Path;
 use Minimal\Foundation\Facade;
 use Minimal\Foundation\Container;
+use Minimal\Foundation\Exception;
 
 /**
  * 应用类
@@ -66,7 +67,7 @@ class Application extends Container
     {
         // 错误程序
         set_error_handler(function($errno, $message, $file, $line){
-            throw new \ErrorException($message, 0, $errno, $file, $line);
+            throw new Exception($message, 0, [$errno, $file, $line]);
         });
         // 异常程序
         set_exception_handler(function($th){

@@ -78,6 +78,7 @@ class Container
     {
         // 方法/函数反射对象
         $reflection = $callable instanceof Closure ? new ReflectionFunction($callable) : new ReflectionMethod(...$callable);
+
         // 解析参数
         $invokeParams = $this->getParameters($reflection);
         // 合并参数
@@ -92,6 +93,7 @@ class Container
                 array_unshift($parameters, $this->newInstance($callable[0]));
             }
         }
+
         // 返回结果
         return $reflection->invoke(...$parameters);
     }

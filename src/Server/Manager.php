@@ -25,7 +25,7 @@ class Manager extends ManagerInterface
         'session'   =>  \Minimal\Http\Session::class,
         'request'   =>  \Minimal\Http\Request::class,
         'response'  =>  \Minimal\Http\Response::class,
-        'view'      =>  \think\Template::class,
+        'view'      =>  \Minimal\Http\View::class,
     ];
 
     /**

@@ -167,7 +167,7 @@ class Validate
             foreach ($item['rule']['call'] as $token => $callback) {
                 $bool = $callback[0]($this->dataset[$name], $this->dataset);
                 if (false === $bool) {
-                    throw new Exception($this->getMessage($token, $context + $callback[1]), 0, $item);
+                    throw new Exception($this->getMessage($token, $context + $callback[1]));
                 }
             }
         }
@@ -637,6 +637,6 @@ class Validate
             $message = str_replace(':' . $key, (string) $value, $message);
         }
 
-        return $message . ' -' . $token;
+        return $message;
     }
 }

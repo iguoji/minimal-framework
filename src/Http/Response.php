@@ -75,14 +75,6 @@ class Response
      */
     public function html(array|string $filename = null, array $params = []) : static
     {
-        // 模板引擎
-        if (!$this->app->has('view')) {
-            $config = $this->app->config->get('view', []);
-            $config['view_path'] = $this->app->viewPath() . DIRECTORY_SEPARATOR;
-            $config['cache_path'] = $this->app->cachePath('view') . DIRECTORY_SEPARATOR;
-            $this->app->get('view', $config);
-        }
-
         // 参数整理
         if (is_array($filename)) {
             $params = $filename;
@@ -104,10 +96,7 @@ class Response
         // 按静态页面渲染
         $filename = $this->app->viewPath($filename . '.html');
         if (is_file($filename)) {
-            ob_start();
-            ob_implicit_flush(false);
-            $this->app->view->fetch($filename, $params);
-            $context = ob_get_clean();
+            $context = $this->app->view->content($filename, $params);
         }
 
         // 设置内容
@@ -131,12 +120,16 @@ class Response
                 'trace'     =>  $th->getTrace(),
             ];
         }
-        return $this->json(
-            method_exists($th, 'getData') ? $th->getData() : [],
-            $th->getCode() ?: 500,
-            $th->getMessage(),
-            $context
-        );
+
+        $code = $th->getCode() ?: 500;
+        $message = $th->getMessage();
+        $data = method_exists($th, 'getData') ? $th->getData() : [];
+
+        if ($code == 302 && !empty($data)) {
+            return $this->redirect($data[0]);
+        }
+
+        return $this->json($data, $code, $message, $context);
     }
 
     /**
