@@ -7,12 +7,18 @@ use Swoole\Process;
 use Minimal\Application;
 use Minimal\Contracts\Server;
 use Minimal\Foundation\Exception;
+use Minimal\Support\Traits\Config as ConfigTrait;
 
 /**
  * Http服务器类
  */
 class Http implements Server
 {
+    /**
+     * 配置函数
+     */
+    use ConfigTrait;
+
     /**
      * 系统配置
      */
@@ -48,7 +54,6 @@ class Http implements Server
             'OnHandShake'         =>  ['Server:OnHandShake',      \Minimal\Server\Listener\WebSocket\OnHandShake::class],
             'OnMessage'           =>  ['Server:OnMessage',        \Minimal\Server\Listener\WebSocket\OnMessage::class],
             'OnOpen'              =>  ['Server:OnOpen',           \Minimal\Server\Listener\WebSocket\OnOpen::class],
-            'OnRequest'           =>  ['Server:OnRequest',        \Minimal\Server\Listener\WebSocket\OnRequest::class],
         ],
     ];
 
@@ -115,24 +120,6 @@ class Http implements Server
     }
 
     /**
-     * 设置配置
-     */
-    public function setConfig(string|int $key, mixed $value) : static
-    {
-        $this->config[$key] = $value;
-
-        return $this;
-    }
-
-    /**
-     * 获取配置
-     */
-    public function getConfig(string $key = null) : mixed
-    {
-        return isset($key) ? ($this->config[$key] ?? null) : ($this->config ?? []);
-    }
-
-    /**
      * 获取默认配置
      */
     public function getDefaultConfig() : array
@@ -179,7 +166,7 @@ class Http implements Server
         }
 
         // 获取配置
-        $config = $this->getConfig();
+        $config = $this->getConfigs();
 
         // 实例化服务器
         $this->handle = new $config['class'](...array_values($config['constructor']));
@@ -249,7 +236,7 @@ class Http implements Server
     public function status() : bool
     {
         // 获取配置
-        $config = $this->getConfig();
+        $config = $this->getConfigs();
 
         // 获取PID文件
         $file = $config['settings']['pid_file'];
@@ -278,7 +265,7 @@ class Http implements Server
     public function bindServerEvents() : void
     {
         // 获取配置
-        $config = $this->getConfig();
+        $config = $this->getConfigs();
 
         // 循环合并服务器事件
         $events = [];

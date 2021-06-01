@@ -65,7 +65,7 @@ class Response
             'messgae'   =>  $message ?? ($code == 200 ? '恭喜您、操作成功！' : '很抱歉、操作失败！'),
             'data'      =>  $data,
         ], $context);
-        $this->content(json_encode($result));
+        $this->content(json_encode($result, JSON_UNESCAPED_UNICODE));
 
         return $this;
     }
@@ -142,7 +142,8 @@ class Response
         }
 
         $this->getHandle()->header('Content-Type', $mime ?? File::mimeType($filename));
-        $this->getHandle()->sendfile($filename);
+        // $this->getHandle()->sendfile($filename);
+        $this->app->context->set('response:end:sendfile', $filename);
 
         return $this;
     }
@@ -150,9 +151,13 @@ class Response
     /**
      * 页面跳转
      */
-    public function redirect(string $url, int $http_code = 302) : static
+    public function redirect(string $url, array $data = [], int $http_code = 302) : static
     {
-        $this->getHandle()->redirect($url, $http_code);
+        if (!empty($data)) {
+            $this->content(json_encode($data, JSON_UNESCAPED_UNICODE));
+        }
+        // $this->getHandle()->redirect($url, $http_code);
+        $this->app->context->set('response:end:redirect', [$url, $http_code]);
 
         return $this;
     }
@@ -165,15 +170,19 @@ class Response
         if ($this->getHandle()->isWritable()) {
             // 状态码
             $this->getHandle()->status(200);
-            // Cookie
-            $cookies = $this->app->cookie->all();
-            foreach ($cookies as $key => $cookie) {
-                $this->getHandle()->cookie(...array_values($cookie));
+            // 按情况处理
+            if ($this->app->context->has('response:end:sendfile')) {
+                // 文件输出
+                $this->getHandle()->sendfile($this->app->context->get('response:end:sendfile'));
+            } else if ($this->app->context->has('response:end:redirect')) {
+                // 重定向
+                $this->getHandle()->redirect(...$this->app->context->get('response:end:redirect'));
+            } else {
+                // 内容
+                $html = $html ?: $this->getContent();
+                // 输出响应
+                $this->getHandle()->end($html);
             }
-            // 内容
-            $html = $html ?: $this->getContent();
-            // 输出响应
-            $this->getHandle()->end($html);
         }
     }
 

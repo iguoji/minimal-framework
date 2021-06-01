@@ -13,7 +13,7 @@ class Request
     /**
      * 构造方法
      */
-    public function __construct(protected Application $app)
+    public function __construct(protected Application $app, public Session $session)
     {}
 
     /**
@@ -23,10 +23,7 @@ class Request
     {
         $this->getContext()->set(__CLASS__, $object);
 
-        // Cookie
-        $this->app->cookie->start($object->cookie ?? []);
-        // Session
-        $this->app->session->start($object->cookie ?? []);
+        $this->session->start($this);
 
         return $this;
     }
@@ -195,18 +192,30 @@ class Request
     /**
      * 获取会话信息Cookie
      */
-    public function cookie() : mixed
+    public function cookie(string $name = null) : mixed
     {
-        return $this->app->cookie;
+        return isset($name) ? ($this->getHandle()->cookie[$name] ?? null) : ($this->getHandle()->cookie ?? []);
     }
 
     /**
-     * 获取会话信息Session
+     * 获取/设置会话信息Session
      */
-    public function session() : mixed
+    public function session(string $name = null, mixed $value = null, int $expire = null) : mixed
     {
-        return $this->app->session;
+        switch (func_num_args()) {
+            case 0:
+                return $this->session->all();
+                break;
+            case 1:
+                return $this->session->get($name);
+                break;
+            default:
+                $this->session->set($name, $value, $expire);
+                return $value;
+                break;
+        }
     }
+
 
 
 

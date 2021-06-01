@@ -3,107 +3,185 @@ declare(strict_types=1);
 
 namespace Minimal\Http;
 
-use Minimal\Application;
-use Minimal\Foundation\Cache;
-use Minimal\Foundation\Config;
 use Minimal\Support\Str;
+use Minimal\Foundation\Config;
+use Minimal\Cache\Manager as Cache;
+use Minimal\Support\Traits\Config as ConfigTrait;
 
 /**
- * 会话类(Session)
+ * Session会话类
  */
 class Session
 {
     /**
-     * 系统配置
+     * 配置函数
+     */
+    use ConfigTrait;
+
+    /**
+     * 全局配置
      */
     protected array $config = [
         'name'      =>  'session_id',
-        'expire'    =>  60 * 60 * 24,
         'path'      =>  '/',
-        'domain'    =>  '',
-        'secure'    =>  false,
-        'httponly'  =>  false,
-        'samesite'  =>  '',
-        'priority'  =>  '',
+        'prefix'    =>  '',
+        'length'    =>  64,
+        'expire'    =>  60 * 60 * 24,
+        'header'    =>  ['authorization', 'Session'],
     ];
 
     /**
-     * 构造方法
+     * 当前请求
      */
-    public function __construct(protected Application $app)
+    protected Request $request;
+
+    /**
+     * 构造函数
+     */
+    public function __construct(protected Context $context, protected Cache $cache, Config $config)
     {
-        // 获取配置
-        $this->config = array_merge($this->config, $app->config->get('session', []));
+        // 合并配置
+        $this->config = array_merge($this->config, $config->get('session', []));
+    }
+
+
+
+
+    /**
+     * 启动新会话或者重用现有会话
+     */
+    public function start(Request $req) : bool
+    {
+        // 获取SessionId
+        $sessionId = $req->cookie($this->name());
+        if (empty($sessionId)) {
+            // 从Header中获取
+            $header = $req->header($this->config['header'][0]) ?? '';
+            if (str_starts_with($header, $this->config['header'][1])) {
+                $sessionId = substr($header, strlen($this->config['header'][1]) + 1);
+            } else {
+                $sessionId = $this->createId();
+            }
+        }
+
+        // 设置SessionId
+        $this->id($sessionId);
+
+        // 返回结果
+        return true;
     }
 
     /**
-     * 获取配置
+     * 读取/设置会话名称
      */
-    public function getConfig(string $key = null) : mixed
+    public function name(string $name = null) : string
     {
-        return isset($key) ? ($this->config[$key] ?? null) : ($this->config ?? []);
+        if (isset($name)) {
+            $this->config['name'] = $name;
+        }
+
+        return $this->config['name'];
     }
 
     /**
-     * 设置配置
+     * 拼合Key
      */
-    public function setConfig(string $key, mixed $value) : void
+    public function key(string|int ...$keys) : string
     {
-        $this->config[$key] = $value;
+        array_unshift($keys, $this->name());
+
+        $keys = array_filter($keys);
+
+        return implode(':', $keys);
     }
 
     /**
-     * 开启会话
+     * 获取/设置当前会话 ID
+     * 如果当前没有会话，则返回空字符串（""）。
      */
-    public function start(array $cookie = []) : void
+    public function id(string $id = null, int $expire = null) : string
     {
-        $name = $this->config['name'];
-        $token = $cookie[$name] ?? $this->createSessionId();
+        if (is_null($id)) {
+            $id = $this->context->get($this->name());
+        } else {
+            $this->context->set($this->name(), $id);
+        }
 
-        $this->app->context->set('session:token',  $token);
-        $this->app->cookie->set($name, $token);
+        return $id ?? '';
     }
 
     /**
-     * 获取会话ID
+     * 创建一个新的会话ID
      */
-    public function getSessionId() : ?string
+    public function createId(string $prefix = '') : string|bool
     {
-        return $this->app->context->get('session:token');
+        $id = ($prefix ?: $this->config['prefix']) . Str::random($this->config['length']);
+
+        return $id;
     }
 
     /**
-     * 创建会话ID
+     * 返回当前会话状态
      */
-    public function createSessionId() : string
+    public function status(string $id = null) : int
     {
-        return Str::random(32);
+        if ((!is_null($id) && $this->cache->has($this->name() . ':' . $id)) || !empty($this->id())) {
+            return PHP_SESSION_ACTIVE;
+        }
+
+        return PHP_SESSION_NONE;
     }
 
     /**
-     * 设置数据
+     * 到期时间
      */
-    public function set(string|int $key, mixed $value, int $expire = null) : void
+    public function expire(string|int $key = '') : int
     {
-        $this->app->cache->set($this->parseKey($key), $value, $expire);
+        return $this->cache->ttl($this->key($this->id(), $key));
     }
+
+
+
+
 
     /**
      * 获取数据
      */
     public function get(string|int $key, mixed $default = null) : mixed
     {
-        return $this->app->cache->get($this->parseKey($key), $default);
+        $data = $this->cache->get($this->key($this->id(), $key), $default);
+
+        return $data === $default ? $default : unserialize($data);
     }
 
     /**
-     * 获取所有
+     * 获取全部数据
      */
     public function all() : array
     {
-        $keys = $this->app->cache->keys($this->parseKey() . '*');
+        $keys = $this->cache->keys($this->key($this->id()));
+        $data = $this->cache->mGet($keys);
+        $data = false === $data ? [] : $data;
+        foreach ($data as $key => $value) {
+            $data[$key] = unserialize($value);
+        }
+        return $data;
+    }
 
-        return $keys ? $this->app->cache->mGet($key) : [];
+    /**
+     * 设置数据
+     */
+    public function set(string|int $key, mixed $value, int $expire = null) : mixed
+    {
+        // 过期时间
+        $expire = $expire ?? $this->config['expire'];
+
+        // 保存SessionId到缓存中
+        if ($expire > $this->expire()) {
+            $this->cache->set($this->key($this->id()), time(), $expire ?? $this->config['expire']);
+        }
+
+        return $this->cache->set($this->key($this->id(), $key), serialize($value), $expire);
     }
 
     /**
@@ -111,15 +189,15 @@ class Session
      */
     public function has(string|int $key) : bool
     {
-        return $this->app->cache->has($this->parseKey($key));
+        return $this->cache->has($this->key($this->id(), $key));
     }
 
     /**
-     * 删除一个数据
+     * 删除数据
      */
     public function delete(string|int $key) : void
     {
-        $this->app->cache->delete($this->parseKey($key));
+        $this->cache->delete($this->key($this->id(), $key));
     }
 
     /**
@@ -127,21 +205,7 @@ class Session
      */
     public function clear() : void
     {
-        $keys = $this->app->cache->keys($this->parseKey() . '*');
-
-        $this->app->cache->del($keys);
-    }
-
-    /**
-     * 解析Key
-     */
-    public function parseKey(string|int $key = null) : string
-    {
-        $result = 'session';
-        $token = $this->getSessionId();
-        if (!empty($token)) {
-            $result .= ':' . $token;
-        }
-        return $result . (isset($key) ? ':' . $key : $key);
+        $keys = $this->cache->keys($this->key($this->id()) . '*');
+        $this->cache->del($keys);
     }
 }

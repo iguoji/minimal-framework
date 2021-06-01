@@ -16,7 +16,12 @@ interface Server
     /**
      * 获取服务器配置
      */
-    public function getConfig(string $key = null) : mixed;
+    public function getConfig(string|int $key, mixed $default = null) : mixed;
+
+    /**
+     * 获取服务器全部配置
+     */
+    public function getConfigs() : array;
 
     /**
      * 获取服务器默认配置

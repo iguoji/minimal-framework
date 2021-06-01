@@ -5,7 +5,7 @@ namespace Minimal\Facades;
 
 use Minimal\Foundation\Facade;
 
-class Session extends Facade
+class Cache extends Facade
 {
     public static function getClass() : string
     {
