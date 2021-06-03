@@ -90,6 +90,15 @@ class Response
             $filename = implode(DIRECTORY_SEPARATOR, array_splice($array, 2));
         }
 
+        // 来自于重定向的参数
+        $path = $this->app->request->path();
+        if ($this->app->session->has($path)) {
+            $redirectParams = $this->app->session->get($path);
+            $redirectParams = json_decode($redirectParams, true);
+            $params = array_merge($params, $redirectParams);
+            $this->app->session->delete($path);
+        }
+
         // 最终内容
         $context = $filename;
 
@@ -142,7 +151,6 @@ class Response
         }
 
         $this->getHandle()->header('Content-Type', $mime ?? File::mimeType($filename));
-        // $this->getHandle()->sendfile($filename);
         $this->app->context->set('response:end:sendfile', $filename);
 
         return $this;
@@ -154,9 +162,12 @@ class Response
     public function redirect(string $url, array $data = [], int $http_code = 302) : static
     {
         if (!empty($data)) {
-            $this->content(json_encode($data, JSON_UNESCAPED_UNICODE));
+            $data = array_map(function($item){
+                return json_encode($item, JSON_UNESCAPED_UNICODE);
+            }, $data);
+            $this->app->request->session->set($url, json_encode($data, JSON_UNESCAPED_UNICODE), 60);
         }
-        // $this->getHandle()->redirect($url, $http_code);
+
         $this->app->context->set('response:end:redirect', [$url, $http_code]);
 
         return $this;

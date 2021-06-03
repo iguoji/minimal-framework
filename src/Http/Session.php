@@ -4,8 +4,7 @@ declare(strict_types=1);
 namespace Minimal\Http;
 
 use Minimal\Support\Str;
-use Minimal\Foundation\Config;
-use Minimal\Cache\Manager as Cache;
+use Minimal\Application;
 use Minimal\Support\Traits\Config as ConfigTrait;
 
 /**
@@ -31,17 +30,12 @@ class Session
     ];
 
     /**
-     * 当前请求
-     */
-    protected Request $request;
-
-    /**
      * 构造函数
      */
-    public function __construct(protected Context $context, protected Cache $cache, Config $config)
+    public function __construct(protected Application $app)
     {
         // 合并配置
-        $this->config = array_merge($this->config, $config->get('session', []));
+        $this->config = array_merge($this->config, $app->config->get('session', []));
     }
 
 
@@ -102,9 +96,9 @@ class Session
     public function id(string $id = null, int $expire = null) : string
     {
         if (is_null($id)) {
-            $id = $this->context->get($this->name());
+            $id = $this->app->context->get($this->name());
         } else {
-            $this->context->set($this->name(), $id);
+            $this->app->context->set($this->name(), $id);
         }
 
         return $id ?? '';
@@ -125,7 +119,7 @@ class Session
      */
     public function status(string $id = null) : int
     {
-        if ((!is_null($id) && $this->cache->has($this->name() . ':' . $id)) || !empty($this->id())) {
+        if ((!is_null($id) && $this->app->cache->has($this->name() . ':' . $id)) || !empty($this->id())) {
             return PHP_SESSION_ACTIVE;
         }
 
@@ -137,7 +131,7 @@ class Session
      */
     public function expire(string|int $key = '') : int
     {
-        return $this->cache->ttl($this->key($this->id(), $key));
+        return $this->app->cache->ttl($this->key($this->id(), $key));
     }
 
 
@@ -149,7 +143,7 @@ class Session
      */
     public function get(string|int $key, mixed $default = null) : mixed
     {
-        $data = $this->cache->get($this->key($this->id(), $key), $default);
+        $data = $this->app->cache->get($this->key($this->id(), $key), $default);
 
         return $data === $default ? $default : unserialize($data);
     }
@@ -159,8 +153,8 @@ class Session
      */
     public function all() : array
     {
-        $keys = $this->cache->keys($this->key($this->id()));
-        $data = $this->cache->mGet($keys);
+        $keys = $this->app->cache->keys($this->key($this->id()));
+        $data = $this->app->cache->mGet($keys);
         $data = false === $data ? [] : $data;
         foreach ($data as $key => $value) {
             $data[$key] = unserialize($value);
@@ -178,10 +172,10 @@ class Session
 
         // 保存SessionId到缓存中
         if ($expire > $this->expire()) {
-            $this->cache->set($this->key($this->id()), time(), $expire ?? $this->config['expire']);
+            $this->app->cache->set($this->key($this->id()), time(), $expire ?? $this->config['expire']);
         }
 
-        return $this->cache->set($this->key($this->id(), $key), serialize($value), $expire);
+        return $this->app->cache->set($this->key($this->id(), $key), serialize($value), $expire);
     }
 
     /**
@@ -189,7 +183,7 @@ class Session
      */
     public function has(string|int $key) : bool
     {
-        return $this->cache->has($this->key($this->id(), $key));
+        return $this->app->cache->has($this->key($this->id(), $key));
     }
 
     /**
@@ -197,7 +191,7 @@ class Session
      */
     public function delete(string|int $key) : void
     {
-        $this->cache->delete($this->key($this->id(), $key));
+        $this->app->cache->delete($this->key($this->id(), $key));
     }
 
     /**
@@ -205,7 +199,7 @@ class Session
      */
     public function clear() : void
     {
-        $keys = $this->cache->keys($this->key($this->id()) . '*');
-        $this->cache->del($keys);
+        $keys = $this->app->cache->keys($this->key($this->id()) . '*');
+        $this->app->cache->del($keys);
     }
 }
