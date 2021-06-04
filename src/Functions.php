@@ -82,41 +82,32 @@ if (!function_exists('pagination')) {
 
 		// 组织代码
 		$html = '';
-		$html .= '<p class="m-0 text-muted">当前是第 <span>' . ($startIndex + 1) . '</span> 到 <span>' . ($endIndex + 1) . '</span> 条记录，共有 <span>' . $total . '</span> 条记录</p>';
-		$html .= '<ul class="pagination m-0 ms-auto">';
-			$html .= '<li class="page-item' . ($pageNo == 1 ? ' disabled' : '') . '">';
-				$html .= '<a class="page-link" href="' . $url($prevNo) . '">';
-					$html .= '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="15 6 9 12 15 18" /></svg>';
-					$html .= '上一页';
-				$html .= '</a>';
-			$html .= '</li>';
-			// 1
-			// 		1, 2, 3, 4, 5
-			// 2
-			// 		1, 2, 3, 4, 5
-			// 3
-			// 		1, 2, 3, 4, 5
-			// 4
-			// 		2, 3, 4, 5, 6
-			// 5
-			// 		3, 4, 5, 6, 7
-			$startPageNo = max(1, $pageNo - 2);
-			$endPageNo = max(5, $pageNo + 2);
+		$html .= '<div class="row">';
+			$html .= '<div class="col-sm-12 col-md-6 mb-2 mb-md-0">';
+				$html .= '<p class="m-0 text-muted text-center text-md-start">当前是第 <span>' . ($startIndex + 1) . '</span> 到 <span>' . ($endIndex + 1) . '</span> 条记录，共有 <span>' . $total . '</span> 条记录</p>';
+			$html .= '</div>';
+			$html .= '<div class="col-sm-12 col-md-6">';
+				$html .= '<ul class="pagination justify-content-center justify-content-md-end  m-0 ">';
+					$html .= '<li class="page-item' . ($pageNo == 1 ? ' disabled' : '') . '">';
+						$html .= '<a class="page-link" href="' . $url($prevNo) . '">';
+							$html .= '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="15 6 9 12 15 18" /></svg>';
+							$html .= '上一页';
+						$html .= '</a>';
+					$html .= '</li>';
+					$startPageNo = max(1, $pageNo - 2);
+					$endPageNo = max(5, $pageNo + 2);
 
-			for ($no = $startPageNo;$no <= $totalPages && $no <= $endPageNo; $no++) {
-				$html .= '<li class="page-item' . ($no == $pageNo ? ' active' : '') . '"><a class="page-link" href="' . $url($no) . '">' . $no . '</a></li>';
-			}
-			// $html .= '<li class="page-item"><a class="page-link" href="#">1</a></li>';
-			// $html .= '<li class="page-item active"><a class="page-link" href="#">2</a></li>';
-			// $html .= '<li class="page-item"><a class="page-link" href="#">3</a></li>';
-			// $html .= '<li class="page-item"><a class="page-link" href="#">4</a></li>';
-			// $html .= '<li class="page-item"><a class="page-link" href="#">5</a></li>';
-			$html .= '<li class="page-item' . ($pageNo == $totalPages ? ' disabled' : '') . '">';
-				$html .= '<a class="page-link" href="' . $url($nextNo) . '">';
-					$html .= '下一页 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="9 6 15 12 9 18" /></svg>';
-				$html .= '</a>';
-			$html .= '</li>';
-		$html .= '</ul>';
+					for ($no = $startPageNo;$no <= $totalPages && $no <= $endPageNo; $no++) {
+						$html .= '<li class="page-item' . ($no == $pageNo ? ' active' : '') . '"><a class="page-link" href="' . $url($no) . '">' . $no . '</a></li>';
+					}
+					$html .= '<li class="page-item' . ($pageNo == $totalPages ? ' disabled' : '') . '">';
+						$html .= '<a class="page-link" href="' . $url($nextNo) . '">';
+							$html .= '下一页 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="9 6 15 12 9 18" /></svg>';
+						$html .= '</a>';
+					$html .= '</li>';
+				$html .= '</ul>';
+			$html .= '</div>';
+		$html .= '</div>';
 
 		// 返回代码
 		return $html;
