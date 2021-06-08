@@ -135,7 +135,9 @@ class Response
         $data = method_exists($th, 'getData') ? $th->getData() : [];
 
         if ($code == 302 && !empty($data)) {
-            return $this->redirect($data[0]);
+            return $this->redirect($data[0], [
+                'exception' =>  [$code, $message, '']
+            ]);
         }
 
         return $this->json($data, $code, $message, $context);

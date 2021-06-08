@@ -197,9 +197,9 @@ class Session
     /**
      * 删除所有数据
      */
-    public function clear() : void
+    public function clear(string|int $id = null) : void
     {
-        $keys = $this->app->cache->keys($this->key($this->id()) . '*');
+        $keys = $this->app->cache->keys($this->key($id ?? $this->id()) . '*');
         $this->app->cache->del($keys);
     }
 }
