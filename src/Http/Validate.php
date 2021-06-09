@@ -140,7 +140,7 @@ class Validate
         }
 
         // 不是必填、也没默认值、而且用户还没提供
-        if (!isset($this->dataset[$name]) || (is_string($this->dataset[$name]) && !strlen($this->dataset[$name]))) {
+        if (!isset($this->dataset[$name])) {
             return null;
         }
 

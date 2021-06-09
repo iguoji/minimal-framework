@@ -72,8 +72,10 @@ if (!function_exists('pagination')) {
 		$totalPages = ceil($total / $size);					// 最大页数
 		$prevNo = max($pageNo - 1, 1);						// 上一页
 		$nextNo = min($pageNo + 1, $totalPages);			// 下一页
+		$nextNo = max($nextNo, 1);
 		$startIndex = ($pageNo - 1) * $size;				// 当前第一条记录的索引
 		$endIndex = min($startIndex + $size - 1, $total);	// 当前最后一条记录的索引
+		$endIndex = $endIndex + 1 > $total ? $endIndex - 1 : $endIndex;
 		$queryParams = Request::query();
 		$url = function($pageNo) use($queryParams){
 			$queryParams['pageNo'] = $pageNo;
@@ -100,7 +102,7 @@ if (!function_exists('pagination')) {
 					for ($no = $startPageNo;$no <= $totalPages && $no <= $endPageNo; $no++) {
 						$html .= '<li class="page-item' . ($no == $pageNo ? ' active' : '') . '"><a class="page-link" href="' . $url($no) . '">' . $no . '</a></li>';
 					}
-					$html .= '<li class="page-item' . ($pageNo == $totalPages ? ' disabled' : '') . '">';
+					$html .= '<li class="page-item' . ($pageNo == $totalPages || $totalPages <= 1 ? ' disabled' : '') . '">';
 						$html .= '<a class="page-link" href="' . $url($nextNo) . '">';
 							$html .= '下一页 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="9 6 15 12 9 18" /></svg>';
 						$html .= '</a>';
