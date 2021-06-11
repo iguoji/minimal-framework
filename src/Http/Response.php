@@ -62,7 +62,7 @@ class Response
 
         $result = array_merge([
             'code'      =>  $code,
-            'messgae'   =>  $message ?? ($code == 200 ? '恭喜您、操作成功！' : '很抱歉、操作失败！'),
+            'message'   =>  $message ?? ($code == 200 ? '恭喜您、操作成功！' : '很抱歉、操作失败！'),
             'data'      =>  $data,
         ], $context);
         $this->content(json_encode($result, JSON_UNESCAPED_UNICODE));

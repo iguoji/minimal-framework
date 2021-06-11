@@ -93,15 +93,15 @@ class Session
      * 获取/设置当前会话 ID
      * 如果当前没有会话，则返回空字符串（""）。
      */
-    public function id(string $id = null, int $expire = null) : string
+    public function id(string $id = null) : string
     {
         if (is_null($id)) {
-            $id = $this->app->context->get($this->name());
-        } else {
-            $this->app->context->set($this->name(), $id);
+            return $this->app->context->get($this->name(), '');
         }
 
-        return $id ?? '';
+        $this->app->context->set($this->name(), $id);
+
+        return $id;
     }
 
     /**
@@ -115,23 +115,17 @@ class Session
     }
 
     /**
-     * 返回当前会话状态
-     */
-    public function status(string $id = null) : int
-    {
-        if ((!is_null($id) && $this->app->cache->has($this->name() . ':' . $id)) || !empty($this->id())) {
-            return PHP_SESSION_ACTIVE;
-        }
-
-        return PHP_SESSION_NONE;
-    }
-
-    /**
      * 到期时间
      */
-    public function expire(string|int $key = '') : int
+    public function expire(string|int $key = '', float|int $second = null) : int|bool
     {
-        return $this->app->cache->ttl($this->key($this->id(), $key));
+        $key = $this->key($this->id(), $key);
+
+        if (is_null($second)) {
+            return $this->app->cache->ttl($key);
+        }
+
+        return $this->app->cache->expire($key, (int) $second);
     }
 
 
@@ -163,6 +157,25 @@ class Session
     }
 
     /**
+     * 获取/设置身份
+     */
+    public function identity(string|int $name = null, mixed $data = null, int $expire = null) : string
+    {
+        $id = $this->id();
+        $key = $this->key($id);
+
+        if (0 === func_num_args()) {
+            return $this->get('', '');
+        }
+
+        $this->set('', $name, $expire);
+
+        $this->set($name, $data, $expire);
+
+        return $id;
+    }
+
+    /**
      * 设置数据
      */
     public function set(string|int $key, mixed $value, int $expire = null) : mixed
@@ -170,12 +183,22 @@ class Session
         // 过期时间
         $expire = $expire ?? $this->config['expire'];
 
-        // 保存SessionId到缓存中
-        if ($expire > $this->expire()) {
-            $this->app->cache->set($this->key($this->id()), time(), $expire ?? $this->config['expire']);
+        // 主Session过期时间
+        $ttl = $this->expire();
+        if ($ttl === -2) {
+            // 主Session不存在，保存
+            $this->app->cache->set($this->key($this->id()), '', $expire);
+        } else if ($ttl !== -2 && $ttl < $expire) {
+            // 主Session过期时间 小于 子Session，更新时间
+            $this->expire($expire);
         }
 
-        return $this->app->cache->set($this->key($this->id(), $key), serialize($value), $expire);
+        // 保存数据并返回结果
+        return $this->app->cache->set(
+            $this->key($this->id(), $key),
+            serialize($value),
+            $expire ?? $this->config['expire']
+        );
     }
 
     /**

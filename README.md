@@ -101,3 +101,33 @@ Header: str64
 会话ID存储于当前请求的上下文中
 
 会话数据存储于缓存Redis中
+
+## 5. 身份
+
+### 5.1 初始化
+
+优先级：Cookie > Header
+
+Cookie: session_id => secret
+```php
+$secret = $req->cookie('session_id');
+```
+Header: Authorization => Session secret
+```php
+$string = $req->header('Authorization');
+list($prefix, $secret) = explode(' ', $string);
+```
+
+### 5.2 保存
+
+```php
+// 参数1: 身份名称
+// 参数2: 身份数据
+// 参数3: 有效秒杀
+
+// 例子1：管理员身份
+$req->session->set('admin', [], 60 * 60 * 24);
+
+// 例子2：普通用户身份
+$req->session->set('account', [], 60 * 60 * 24 * 7);
+```

@@ -100,8 +100,14 @@ class Validate
         // 上下文
         $context = ['name' => $item['alias']];
 
+        // 是否提供了值
+        $haveValue = isset($this->dataset[$name]);
+        // 是否提供的是空值
+        $isNullValue = !$haveValue || (is_string($this->dataset[$name]) && !strlen($this->dataset[$name]));
+
         // 默认值
-        if (!isset($this->dataset[$name]) && array_key_exists('default', $item)) {
+        $haveDefaultValue = array_key_exists('default', $item);
+        if ($haveDefaultValue && $isNullValue) {
             $this->dataset[$name] = is_callable($item['default']) ? $item['default']($this->dataset) : $item['default'];
         }
 
@@ -117,7 +123,7 @@ class Validate
         }
 
         // 字段宿主在，我必在
-        if (isset($item['with']) && isset($this->dataset[$name])) {
+        if (isset($item['with']) && $haveValue) {
             $values = array_filter($this->dataset, fn($v, $k) => in_array($k, $item['with']), ARRAY_FILTER_USE_BOTH);
             if (empty($values) || count($item['with']) != count($values)) {
                 $context['field'] = $item['with'];
@@ -128,19 +134,28 @@ class Validate
         // 字段多选一
         if (isset($item['without'])) {
             $values = array_filter($this->dataset, fn($v, $k) => in_array($k, $item['without']), ARRAY_FILTER_USE_BOTH);
-            if (empty($values) && !isset($this->dataset[$name])) {
+            if (empty($values) && !$haveValue) {
                 $context['field'] = $item['without'];
                 throw new Exception($this->getMessage('without', $context));
             }
         }
 
         // 必填
-        if (!isset($this->dataset[$name]) && !empty($item['require'])) {
+        $isRequired = !empty($item['require']);
+        if (!$haveValue && $isRequired) {
             throw new Exception($this->getMessage('require', $context));
         }
 
-        // 不是必填、也没默认值、而且用户还没提供
-        if (!isset($this->dataset[$name])) {
+
+        // 没有值，无需判断，直接跳过，且不返回该字段
+        if (!$haveValue) {
+            // 跳过，且不返回该字段
+            return null;
+        }
+
+        // 无默认值、不是必填、存在值、且是空字符串
+        if (!$haveDefaultValue && !$isRequired && $isNullValue) {
+            // 跳过，且不返回该字段
             return null;
         }
 
@@ -443,13 +458,13 @@ class Validate
     {
         if (!is_null($min)) {
             $this->call(function($value) use($min){
-                return mb_strlen($value) >= $min;
+                return strlen($value) >= $min;
             }, 'length_min', ['rule' => $min]);
         }
 
         if (!is_null($max)) {
             $this->call(function($value) use($max){
-                return mb_strlen($value) <= $max;
+                return strlen($value) <= $max;
             }, 'length_max', ['rule' => $max]);
         }
 
