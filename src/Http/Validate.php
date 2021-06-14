@@ -108,6 +108,7 @@ class Validate
         // 默认值
         $haveDefaultValue = array_key_exists('default', $item);
         if ($haveDefaultValue && $isNullValue) {
+            $haveValue = true;
             $this->dataset[$name] = is_callable($item['default']) ? $item['default']($this->dataset) : $item['default'];
         }
 

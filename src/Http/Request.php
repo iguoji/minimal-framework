@@ -169,6 +169,17 @@ class Request
         return ($this->getHandle()->get ?? [])[$name] ?? $default;
     }
 
+    /**
+     * 获取文件数据
+     */
+    public function files(string $name = null) : array
+    {
+        if (!isset($name)) {
+            return $this->getHandle()->files ?? [];
+        }
+        return $this->getHandle()->files[$name] ?? [];
+    }
+
 
 
 
