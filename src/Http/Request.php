@@ -137,6 +137,14 @@ class Request
         return $this->method() === 'POST';
     }
 
+    /**
+     * 是否为Ajax请求
+     */
+    public function isAjax() : bool
+    {
+        return $this->header('X-Requested-With') === 'XMLHttpRequest';
+    }
+
 
 
 
@@ -189,7 +197,11 @@ class Request
      */
     public function header(string $name = null) : mixed
     {
-        return isset($name) ? ($this->getHandle()->header[$name] ?? null) : ($this->getHandle()->header ?? []);
+        if (isset($name)) {
+            $name = strtolower($name);
+            return $this->getHandle()->header[$name] ?? null;
+        }
+        return $this->getHandle()->header ?? [];
     }
 
     /**
