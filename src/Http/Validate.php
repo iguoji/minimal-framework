@@ -172,9 +172,15 @@ class Validate
         // 正则
         if (isset($item['rule']['regex'])) {
             foreach ($item['rule']['regex'] as $token => $regex) {
-                $bool = 1 === preg_match($regex[0], (string) $this->dataset[$name]);
-                if (false === $bool) {
-                    throw new Exception($this->getMessage($token, $context + $regex[1]));
+                $values = $this->dataset[$name];
+                if (!is_array($values)) {
+                    $values = [$values];
+                }
+                foreach ($values as $key => $value) {
+                    $bool = 1 === preg_match($regex[0], (string) $value);
+                    if (false === $bool) {
+                        throw new Exception($this->getMessage($token, $context + $regex[1]));
+                    }
                 }
             }
         }
