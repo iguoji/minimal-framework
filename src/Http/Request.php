@@ -142,7 +142,7 @@ class Request
      */
     public function isAjax() : bool
     {
-        return $this->header('X-Requested-With') === 'XMLHttpRequest';
+        return $this->header('X-Requested-With') === 'XMLHttpRequest' || !str_ends_with($this->path(), '.html');
     }
 
 

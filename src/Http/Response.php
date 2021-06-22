@@ -14,6 +14,11 @@ use Minimal\Foundation\Exception;
 class Response
 {
     /**
+     * 网页后缀
+     */
+    protected string $ext = '.html';
+
+    /**
      * 构造方法
      */
     public function __construct(protected Application $app)
@@ -53,6 +58,10 @@ class Response
         return $this->app->context->get('response:content', '');
     }
 
+
+
+
+
     /**
      * 返回Json
      */
@@ -60,12 +69,11 @@ class Response
     {
         $this->getHandle()->header('Content-Type', 'application/json;charset=utf-8');
 
-        $result = array_merge([
+        $this->content(json_encode(array_merge([
             'code'      =>  $code,
             'message'   =>  $message ?? ($code == 200 ? '恭喜您、操作成功！' : '很抱歉、操作失败！'),
             'data'      =>  $data,
-        ], $context);
-        $this->content(json_encode($result, JSON_UNESCAPED_UNICODE));
+        ], $context), JSON_UNESCAPED_UNICODE));
 
         return $this;
     }
@@ -73,11 +81,15 @@ class Response
     /**
      * 返回Html
      */
-    public function html(array|string $filename = null, array $params = []) : static
+    public function html(array|string $filename = null, array $data = []) : static
     {
+        // 来自于Ajax，直接返回JSON
+        if ($this->app->request->isAjax()) {
+            return $this->json($data);
+        }
         // 参数整理
         if (is_array($filename)) {
-            $params = $filename;
+            $data = $filename;
             $filename = null;
         }
         if (is_null($filename)) {
@@ -93,19 +105,23 @@ class Response
         // 来自于重定向的参数
         $path = $this->app->request->path();
         if ($this->app->session->has($path)) {
-            $redirectParams = $this->app->session->get($path);
-            $redirectParams = json_decode($redirectParams, true);
-            $params = array_merge($params, $redirectParams);
+            $redirectData = $this->app->session->get($path);
+            $redirectData = json_decode($redirectData, true);
+            $data = array_merge($data, $redirectData);
             $this->app->session->delete($path);
         }
 
-        // 最终内容
-        $context = $filename;
-
-        // 按静态页面渲染
-        $filename = $this->app->viewPath($filename . '.html');
+        // 文件判断
+        if (!str_ends_with($filename, '.html')) {
+            $filename .= '.html';
+        }
+        if (!is_file($filename)) {
+            $filename = $this->app->viewPath($filename);
+        }
         if (is_file($filename)) {
-            $context = $this->app->view->content($filename, $params);
+            $context = $this->app->view->content($filename, $data);
+        } else {
+            $context = $filename;
         }
 
         // 设置内容
@@ -121,6 +137,7 @@ class Response
      */
     public function exception(Throwable $th) : static
     {
+        // 异常上下文
         $context = [];
         if (!empty($this->app->env->get('app.debug'))) {
             $context = [
@@ -130,17 +147,30 @@ class Response
             ];
         }
 
+        // 异常信息
         $code = $th->getCode() ?: 500;
         $message = $th->getMessage();
         $data = method_exists($th, 'getData') ? $th->getData() : [];
 
-        if ($code == 302 && !empty($data)) {
-            return $this->redirect($data[0], [
-                'exception' =>  [$code, $message, '']
-            ]);
+        // 来自于Ajax，直接返回异常
+        if ($this->app->request->isAjax()) {
+            return $this->json($data, $code, $message, $context);
         }
 
-        return $this->json($data, $code, $message, $context);
+        // 普通请求，返回Html页面
+        return $this->html(
+            __DIR__ . '/html/500.html',
+            array_merge([
+                'code'      =>  $code,
+                'message'   =>  $message,
+                'data'      =>  $data,
+            ], $context)
+        );
+        // if ($code == 302 && !empty($data)) {
+        //     return $this->redirect($data[0], [
+        //         'exception' =>  [$code, $message, '']
+        //     ]);
+        // }
     }
 
     /**
@@ -163,6 +193,11 @@ class Response
      */
     public function redirect(string $url, array $data = [], int $http_code = 302) : static
     {
+        // 来自于Ajax，直接返回JSON
+        if ($this->app->request->isAjax()) {
+            return $this->json($data);
+        }
+
         if (!empty($data)) {
             $data = array_map(function($item){
                 return json_encode($item, JSON_UNESCAPED_UNICODE);
@@ -174,6 +209,10 @@ class Response
 
         return $this;
     }
+
+
+
+
 
     /**
      * 结束响应

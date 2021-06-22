@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{$code|default='500'}</title>
+</head>
+<body>
+<h3>{$message}</h3>
+<h5>File: {$file}</h5>
+<h5>Line: {$line}</h5>
+{notempty name="$data"}
+<pre>
+{$data|var_export=###,true}
+</pre>
+{/notempty}
+{foreach $trace as $item}
+<hr />
+{notempty name="$item['file']"}
+<div>File: {$item['file']}</div>
+<div>Line: {$item['line']}</div>
+{/notempty}
+{notempty name="$item['class']"}
+<div>Class: {$item['class']}</div>
+<div>Type: {$item['type']}</div>
+{/notempty}
+<div>Func: {$item['function']}</div>
+{notempty name="$item['arsg']"}
+<div>Args: {$item['arsg']|json_encode}</div>
+{/notempty}
+{/foreach}
+</body>
+</html>

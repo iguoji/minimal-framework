@@ -54,10 +54,24 @@ class OnTask implements Listener
 
             // 调用类的某个方法
             if (is_array($data) && count($data) >= 2 && is_string($data[0]) && class_exists($data[0]) && is_string($data[1])) {
-                $class = array_shift($data);
-                $method = array_shift($data);
-                $ins = $this->app->get($class);
-                $ins->$method(...$data);
+                try {
+                    // 开启事务
+                    $this->app->database->beginTransaction();
+
+                    // 任务处理
+                    $class = array_shift($data);
+                    $method = array_shift($data);
+                    $ins = $this->app->get($class);
+                    $ins->$method(...$data);
+
+                    // 提交事务
+                    $this->app->database->commit();
+                } catch (\Throwable $th) {
+                    // 事务回滚
+                    $this->app->database->commit();
+                    // 记录错误
+                    $this->app->log->error($th->getMessage(), [$data, $th->getCode(), $th->getMessage(), method_exists($th, 'getData') ? $th->getData() : [], $th->getTrace() ]);
+                }
 
                 // 标记完成，不然无法触发回调
                 $task->finish(true);
