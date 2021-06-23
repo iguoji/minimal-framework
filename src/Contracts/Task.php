@@ -15,6 +15,7 @@ interface Task
 
     /**
      * 时间间隔
+     * 单位毫秒，1000毫秒等于1秒
      */
     public function interval() : int;
 

@@ -157,6 +157,13 @@ class Response
             return $this->json($data, $code, $message, $context);
         }
 
+        // 需要跳转
+        if ($code == 302 && !empty($data)) {
+            return $this->redirect($data[0], [
+                'exception' =>  [$code, $message, '']
+            ]);
+        }
+
         // 普通请求，返回Html页面
         return $this->html(
             __DIR__ . '/html/500.html',
@@ -166,11 +173,6 @@ class Response
                 'data'      =>  $data,
             ], $context)
         );
-        // if ($code == 302 && !empty($data)) {
-        //     return $this->redirect($data[0], [
-        //         'exception' =>  [$code, $message, '']
-        //     ]);
-        // }
     }
 
     /**
