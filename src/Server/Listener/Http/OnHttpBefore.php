@@ -40,8 +40,12 @@ class OnHttpBefore implements Listener
 
         // Favicon
         $path = $request->path();
-        if (in_array($path, ['/favicon.ico']) || str_ends_with($path, 'js.map')) {
-            $response->end();
+        if (in_array($path, ['/favicon.ico'])) {
+            return false;
+        }
+        // 非网页请求
+        $accept = $request->header('Accept');
+        if (str_ends_with($path, '.html') && false === strpos($accept, 'text/html')) {
             return false;
         }
 

@@ -32,6 +32,7 @@ class Validate
     protected string $defaultMessage = '很抱歉、:name不正确！';
     protected array $messages = [
         'require'       =>  '很抱歉、:name必须提供！',
+        'nullable'      =>  '很抱歉、:name不能为空！',
         'confirm'       =>  '很抱歉、:name必须和:field保持一致！',
         'with'          =>  '很抱歉、当:name存在时:field也必须提供！',
         'without'       =>  '很抱歉、:name或:field至少需要提供一个！',
@@ -102,14 +103,21 @@ class Validate
 
         // 是否提供了值
         $haveValue = isset($this->dataset[$name]);
-        // 是否提供的是空值
-        $isNullValue = !$haveValue || (is_string($this->dataset[$name]) && !strlen($this->dataset[$name]));
+
+        // 是否接收空值
+        $nullable = $item['nullable'] ?? false;
+        // 是空字符串
+        $isNullString = $haveValue && is_string($this->dataset[$name]) && !strlen($this->dataset[$name]);
 
         // 默认值
         $haveDefaultValue = array_key_exists('default', $item);
-        if ($haveDefaultValue && $isNullValue) {
-            $haveValue = true;
+        if ($haveDefaultValue && (!$haveValue || $isNullString)) {
+            // 设置默认值
             $this->dataset[$name] = is_callable($item['default']) ? $item['default']($this->dataset) : $item['default'];
+            // 标记为以提供了值
+            $haveValue = true;
+            // 再次判断是否为空字符串
+            $isNullString = is_string($this->dataset[$name]) && !strlen($this->dataset[$name]);
         }
 
         // 字段比较
@@ -143,22 +151,49 @@ class Validate
 
         // 必填
         $isRequired = !empty($item['require']);
-        if (!$haveValue && $isRequired) {
+        if ($isRequired && !$haveValue) {
             throw new Exception($this->getMessage('require', $context));
         }
 
 
-        // 没有值，无需判断，直接跳过，且不返回该字段
-        if (!$haveValue) {
-            // 跳过，且不返回该字段
+        // 下列情况将忽略字段
+        if (
+            // 1. 不是必填 + 没有提供值
+            (!$isRequired && !$haveValue)
+            // 2. 不是必填 + 不允许空值 + 空字符串
+            || (!$isRequired && !$nullable && $isNullString)
+        ) {
             return null;
         }
 
-        // 无默认值、不是必填、存在值、且是空字符串
-        if (!$haveDefaultValue && !$isRequired && $isNullValue) {
-            // 跳过，且不返回该字段
-            return null;
-        }
+        // // 是否可为空值
+        // $nullable = $item['nullable'] ?? true;
+
+
+        // // 下列无需详细校验：
+        // // 1. 可以为空 + 空字符串
+        // if ($nullable && $isNullString) {
+        //     return null;
+        // }
+
+        // // 不可为空、且提供了值
+        // if (!$nullable && $haveValue) {
+        //     // 空字符串
+        //     if ($isNullString) {
+        //         throw new Exception($this->getMessage('nullable', $context));
+        //     }
+        // }
+
+        // // 1. 没有值
+        // // 2. 可为空，且是空字符串
+        // // if (!$haveValue || ($nullable && $isNullString)) {
+        // //     // 跳过，且不返回该字段
+        // //     return null;
+        // // }
+
+        // if ($haveValue) {
+
+        // }
 
         // 过滤
         if (isset($item['rule']['filter'])) {
@@ -335,6 +370,19 @@ class Validate
     public function default(mixed $value) : static
     {
         $this->bindings[$this->current]['default'] = $value;
+
+        return $this;
+    }
+
+    /**
+     * 是否接收空值
+     * 默认：false
+     * true：接收
+     * false：不接收空值，将忽略该字符串
+     */
+    public function nullable(bool $bool = false) : static
+    {
+        $this->bindings[$this->current]['nullable'] = $bool;
 
         return $this;
     }

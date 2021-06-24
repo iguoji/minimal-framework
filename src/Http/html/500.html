@@ -1,34 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{$code|default='500'}</title>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Oops！{$code|default='500'}</title>
+    <style>
+    html,body {
+        background-color: #f4f6fa;
+        color: #232e3c;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+        font-feature-settings: "liga" 0;
+        -webkit-text-size-adjust: 100%;
+        -webkit-tap-highlight-color: transparent;
+        font-family: "Inter",-apple-system,BlinkMacSystemFont,San Francisco,Segoe UI,Roboto,Helvetica Neue,sans-serif;
+    }
+    .container {
+        width: 50%;
+        margin: 0 auto;
+    }
+    .main {
+        position: relative;
+        margin: 1rem 0;
+    }
+    .main .title {
+        font-size: 1.5rem;
+        margin-bottom: .5rem;
+    }
+    .main .subtitle {
+        font-size: 1rem;
+    }
+    .main .back {
+        text-decoration: none;
+        color: #206bc4;
+    }
+    .card {
+        box-shadow: rgb(35 46 60 / 4%) 0 2px 4px 0;
+        border: 1px solid rgba(101,109,119,.16);
+        background-color: #fff;
+        border-radius: 3px;
+        padding: 1rem;
+    }
+    .card .row {
+        padding-top: .75rem;
+        margin-bottom: .75rem;
+        border-top: 1px solid rgba(101,109,119,.16);
+    }
+    .card .row:first-child {
+        padding-top: 0;
+        border-top: none;
+    }
+    .card .row:last-child {
+        margin-bottom: 0;
+    }
+    .card .row strong {
+        font-weight: 600;
+        display: inline-block;
+        width: 3rem;
+    }
+    .mb-1 {
+        margin-bottom: .25rem;
+    }
+    .small {
+        font-size: 85.7142857%;
+    }
+    .text-muted {
+        color: #656d77;
+    }
+    </style>
 </head>
 <body>
-<h3>{$message}</h3>
-<h5>File: {$file}</h5>
-<h5>Line: {$line}</h5>
-{notempty name="$data"}
-<pre>
-{$data|var_export=###,true}
-</pre>
-{/notempty}
-{foreach $trace as $item}
-<hr />
-{notempty name="$item['file']"}
-<div>File: {$item['file']}</div>
-<div>Line: {$item['line']}</div>
-{/notempty}
-{notempty name="$item['class']"}
-<div>Class: {$item['class']}</div>
-<div>Type: {$item['type']}</div>
-{/notempty}
-<div>Func: {$item['function']}</div>
-{notempty name="$item['arsg']"}
-<div>Args: {$item['arsg']|json_encode}</div>
-{/notempty}
-{/foreach}
+<div class="container">
+    <div class="main">
+        <div class="title">{$message}</div>
+        <div class="subtitle small text-muted mb-1">{$file} : {$line}</div>
+        <div>
+            <a class="back" href="{$from ?: 'javascript:window.history.back();'}">点击返回上一页</a>
+        </div>
+        {notempty name="$data"}
+        <pre>{$data|var_export=###,true}</pre>
+        {/notempty}
+    </div>
+
+    <div class="card">
+        {foreach $trace as $item}
+        <div class="row">
+            {notempty name="$item['class']"}
+            <div class="mb-1">{$item['class']}{$item['type']}{$item['function']}()</div>
+            {/notempty}
+
+            {notempty name="$item['file']"}
+            <div class="small text-muted">{$item['file']} : {$item['line']}</div>
+            {/notempty}
+
+            {notempty name="$item['arsg']"}
+            <div><strong>Args:</strong> {$item['arsg']|json_encode}</div>
+            {/notempty}
+        </div>
+        {/foreach}
+    </div>
+</div>
 </body>
 </html>
